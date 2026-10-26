@@ -1,15 +1,18 @@
-// /window-slide (set 3, Victor 2026-10-26): his footage full frame with a dark CRT pane above his head, the size of the
-// safe rect's upper half. The pane is two door halves (the Resolve mark and "DaVinci Resolve 21.1" typed across the seam,
-// "MCP server" in coral under it). On "Resolve's" a green packet leaves his voice on the live scope trace that runs along
-// the pane's bottom edge and splits in two; the halves follow the two packets apart (eased, each half sliding into its
-// pocket and receding a touch) to reveal the real Edit page press shot (SHOTS.edit) behind them, pushed in on the
-// timeline, racking into focus and panning slowly along the clips. The frame answers in coral when the halves land.
-// On "lets" (t 29) the packets run back in from the edges and the halves close behind them, shut by t 40, before the
-// reel has scrolled the effect out (it is mounted for t 0..41 and scrolls out from t 32).
-// Face rule: in this take his head spans x 270..795 and y 485..1080, so a pane this size would cover it where it was shot.
-// The take is lowered by DROP px instead (no extra zoom); a blurred copy of the same take fills the band above it, so the
-// footage still runs edge to edge and his hair starts below the trace.
-// 2.5D: room (far), pane and trace (near, 1.25x the drift), press shot recessed behind the halves (moves against the drift).
+// /window-slide (set 3 on the ArtCraft take, Victor 2026-10-26): his footage full frame with a dark CRT pane above his head,
+// the size of the safe rect's upper half. The pane is two door halves: the ArtCraft mark (LOGOS.resolve), "PhotoCraft"
+// (COUNTS_TITLE) and "MCP server" (MCP.phrase, coral) typed across the seam. On "features" a green packet leaves his voice
+// on the live scope trace that runs along the pane's bottom edge and splits in two; the halves follow the two packets apart
+// (eased, each half sliding into its pocket and receding a touch) to reveal the real PhotoCraft capture (SHOTS.color)
+// behind them, pushed in on the canvas and the Curves and Layers panels, racking into focus and panning slowly toward the
+// panels. The frame answers in coral when the halves land. On "to" (t 30) the packets run back in from the edges and the
+// halves close behind them, shut by t 40 as "keyboard shortcuts." comes up, before the reel has scrolled the effect out
+// (it is mounted for t 0..41 and scrolls out from t 32).
+// Timing: "features" and "shortcuts" are 1.7 s (41 frames) apart in the take, longer than the whole mount, so the clip
+// starts OFFSET frames in (at "same features"); the reel is muted, his lips and the caption follow the offset.
+// Face rule: over that span his head spans x 315..810 and y 385..945, so a pane this size would cover it where it was shot.
+// The take is lowered by DROP px instead (no extra zoom): the smallest drop that keeps his hair under the trace's peak.
+// A blurred copy of the same take fills the band above, so the footage still runs edge to edge.
+// 2.5D: room (far), pane and trace (near, 1.25x the drift), the capture recessed behind the halves (moves against the drift).
 // Camera: hold, one push 1.0 to 1.04 anchored on the seam above his head, hold; a small sine drift throughout.
 // Safe zone: the pane, its packets and the caption stay inside SAFE_IG at every t, including the push and the drift.
 import React from "react";
@@ -31,8 +34,12 @@ const HALF = WW / 2;
 const CX = W / 2;
 /** The live trace runs just under the pane's bottom edge, the length of the frame. */
 const TRACE_Y = WIN.y1 + 14;
-/** His take, lowered so his hair (485 at its highest) clears the trace: hair from about 785, chin about 1380. */
-const DROP = 300;
+/** His take, lowered so his hair (385 at its highest) clears the trace and its voice peak (about 762): hair from about 775,
+ *  chin about 1335 (1360 at the end of the push), well above the caption. */
+const DROP = 390;
+/** The clip starts this many frames in (24 fps), at "same features". */
+const OFFSET = 44;
+const CLIP = "a_shortcuts" as const;
 const FEATHER = "linear-gradient(to bottom, rgba(0,0,0,0) 0px, #000 170px)";
 /** Footage overscan so the drift never shows an edge (1.012 x 1.04 = 1.052, under the 1.07 cap). */
 const OVERSCAN = 1.012;
@@ -48,11 +55,12 @@ const camAt = (t: number) => ({
   dy: 2 * Math.sin(t * 0.061 + 1.2),
 });
 
-// ---------------------------------------------------------------- beats (24 fps, from CLIPS.connect word timings)
-/** "Resolve's" starts at t 8.5: the packets split and run out; the halves follow LAG frames behind. */
-const OPEN = { a: 8.5, b: 20.5 } as const;
-/** "lets" starts at t 29.1: the packets run back in from the edges, the halves close behind them (shut at CLOSE.b + LAG = 40). */
-const CLOSE = { a: 29, b: 38.5 } as const;
+// ---------------------------------------------------------------- beats (24 fps, CLIPS.a_shortcuts word timings less OFFSET)
+/** "features" starts at t 3.5: the packets split and run out; the halves follow LAG frames behind (open by t 17). */
+const OPEN = { a: 3.5, b: 15.5 } as const;
+/** "to" starts at t 30.2: the packets run back in from the edges, the halves close behind them, shut at CLOSE.b + LAG = 40
+ *  as "keyboard" (t 37.2) brings up the caption "keyboard shortcuts." ("shortcuts" itself is at t 44.4, after the mount). */
+const CLOSE = { a: 30, b: 38.5 } as const;
 const LAG = 1.5;
 const progress = (t: number, lag: number) => ez(t, OPEN.a + lag, OPEN.b + lag, EASE.travel) - ez(t, CLOSE.a + lag, CLOSE.b + lag, EASE.travel);
 /** Each half recedes a touch mid-travel (scaled about its outer edge). */
@@ -66,7 +74,7 @@ const bumpsAt = (t: number) => {
   const green = PH.userRgb;
   const bumps: ScopeBump[] = [];
   // His voice, above his head at the center of the line.
-  bumps.push({ x: CX, amp: 2.5 + 14 * voiceEnv("connect", t) + 1.2 * Math.sin(t * 0.37), sigma: 54, rgb: green });
+  bumps.push({ x: CX, amp: 2.5 + 14 * voiceEnv(CLIP, t + OFFSET) + 1.2 * Math.sin(t * 0.37), sigma: 54, rgb: green });
   const packets: { x: number; env: number }[] = [];
   const pOpen = ez(t, OPEN.a, OPEN.b, EASE.travel);
   const envOpen = interpolate(t, [OPEN.a - 1, OPEN.a + 2, OPEN.b - 1, OPEN.b + 4], [0, 1, 1, 0], CLAMP);
@@ -123,45 +131,49 @@ const Trace: React.FC<{ t: number }> = ({ t }) => {
 };
 
 // ---------------------------------------------------------------- inside the pane
-/** The Edit page press shot (5120 x 2880): pushed in on the timeline, racking into focus as the halves open, panning
- *  slowly along the clips toward the playhead. px moves it against the camera drift (it sits deeper than the pane). */
+/** The PhotoCraft capture (2400 x 1500): pushed in on the Properties and Layers panels with the wave's edge beside them,
+ *  racking into focus as the halves open, panning down from the Curves graph to the layer list. px moves it against the
+ *  camera drift (it sits deeper than the pane). The cream canvas is held down so it does not bloom in the tube. */
 const PlateShot: React.FC<{ t: number; px: number }> = ({ t, px }) => {
   const life = ez(t, 4, 48, EASE.inOut);
-  // Pushed in on V3 to A2 (clip thumbnails, names and waveforms readable), the red playhead entering from the right.
-  const k = (WW / 1150) * lerp(1.0, 1.1, life);
-  const cx = lerp(3300, 3650, life);
-  const cy = 2170;
+  // Natural px: x 1560..2360, y 620..1020 (the wave's edge, Reset to defaults, the Layers tab) down to x 1646..2374,
+  // y 968..1332 (the boats and foam beside the layer list: Curves 1, Vibrance 1, Credit, Title, Caption Card).
+  const k = (WW / 800) * lerp(1.0, 1.1, life);
+  const cx = lerp(1960, 2010, life);
+  const cy = lerp(820, 1150, life);
   const focus = ez(t, OPEN.a, OPEN.b + 6, EASE.inOut);
   return (
     <Img
-      src={staticFile(SHOTS.edit)}
+      src={staticFile(SHOTS.color)}
       style={{
         position: "absolute",
-        width: 5120 * k,
-        height: 2880 * k,
+        width: 2400 * k,
+        height: 1500 * k,
         left: WW / 2 - cx * k + px,
         top: WH / 2 - cy * k,
         maxWidth: "none",
-        filter: `blur(${lerp(2.6, 0.35, focus).toFixed(2)}px) contrast(0.92) brightness(${lerp(0.72, 1.1, focus).toFixed(3)}) saturate(${lerp(0.6, 0.95, focus).toFixed(3)})`,
+        filter: `blur(${lerp(2.6, 0.35, focus).toFixed(2)}px) contrast(0.98) brightness(${lerp(0.5, 0.76, focus).toFixed(3)}) saturate(${lerp(0.6, 1, focus).toFixed(3)})`,
       }}
     />
   );
 };
 
-const TITLE_SIZE = 38;
+const TITLE_SIZE = 50;
+const TITLE_TOP = 238;
 const TITLE_W = COUNTS_TITLE.length * 0.6 * TITLE_SIZE; // JetBrains Mono advances 0.6 em
-const SUB_SIZE = 30;
+const SUB_SIZE = 32;
+const SUB_TOP = 308;
 const SUB_W = MCP.phrase.length * 0.6 * SUB_SIZE;
 
-/** The closed face, drawn across the full pane and cut in two by the halves: the Resolve mark, the update typed in. */
+/** The closed face, drawn across the full pane and cut in two by the halves: the ArtCraft mark, PhotoCraft typed in. */
 const DoorFace: React.FC<{ t: number }> = ({ t }) => {
-  const n1 = Math.round(COUNTS_TITLE.length * ez(t, -9, 4, EASE.inOut));
-  const n2 = Math.round(MCP.phrase.length * ez(t, 2, 8, EASE.inOut));
+  const n1 = Math.round(COUNTS_TITLE.length * ez(t, -12, -1, EASE.inOut));
+  const n2 = Math.round(MCP.phrase.length * ez(t, -2, 3, EASE.inOut));
   const caretOn = 0.5 + 0.5 * Math.cos(t * 0.55);
   const caretFade = 1 - ez(t, OPEN.a, OPEN.a + 4, EASE.inOut);
   const typing2 = n2 > 0;
   const caretX = typing2 ? HALF - SUB_W / 2 + n2 * 0.6 * SUB_SIZE : HALF - TITLE_W / 2 + n1 * 0.6 * TITLE_SIZE;
-  const caretY = typing2 ? 316 : 262;
+  const caretTop = typing2 ? SUB_TOP : TITLE_TOP;
   const caretH = typing2 ? SUB_SIZE : TITLE_SIZE;
   const breathe = 1 + 0.012 * Math.sin(t * 0.21);
   return (
@@ -176,7 +188,7 @@ const DoorFace: React.FC<{ t: number }> = ({ t }) => {
         style={{
           position: "absolute",
           left: HALF - TITLE_W / 2,
-          top: 252,
+          top: TITLE_TOP,
           fontFamily: MONO,
           fontWeight: 500,
           fontSize: TITLE_SIZE,
@@ -191,7 +203,7 @@ const DoorFace: React.FC<{ t: number }> = ({ t }) => {
         style={{
           position: "absolute",
           left: HALF - SUB_W / 2,
-          top: 308,
+          top: SUB_TOP,
           fontFamily: MONO,
           fontWeight: 700,
           fontSize: SUB_SIZE,
@@ -206,7 +218,7 @@ const DoorFace: React.FC<{ t: number }> = ({ t }) => {
         style={{
           position: "absolute",
           left: caretX + 3,
-          top: caretY - 6,
+          top: caretTop,
           width: caretH * 0.5,
           height: caretH,
           background: typing2 ? UI.coral : UI.screenInk,
@@ -273,7 +285,7 @@ const Pane: React.FC<{ t: number; px: number }> = ({ t, px }) => {
           boxShadow: "0 24px 60px rgba(0,0,0,0.6), 0 6px 16px rgba(0,0,0,0.4)",
         }}
       >
-        <CRT bloom={0.5}>
+        <CRT bloom={0.35}>
           <AbsoluteFill style={{ background: UI.screen }}>
             <PlateShot t={t} px={px} />
             {/* the recess: the pane's inner shadow, and the shadow each half casts on the shot behind it */}
@@ -323,9 +335,9 @@ export const WindowSlide: React.FC<FxProps> = ({ t }) => {
       {/* Far: the room. A blurred copy of the take fills the band above; the take itself, lowered by DROP, feathers into it. */}
       <div style={camera(1)}>
         <div style={{ position: "absolute", inset: 0, transformOrigin: `${CX}px ${TRACE_Y}px`, transform: `scale(${OVERSCAN})` }}>
-          <Clip name="connect" style={{ filter: "blur(26px) brightness(0.5) saturate(0.85)" }} />
+          <Clip name={CLIP} offset={OFFSET} style={{ filter: "blur(26px) brightness(0.5) saturate(0.85)" }} />
           <div style={{ position: "absolute", left: 0, top: DROP, width: W, height: H, WebkitMaskImage: FEATHER, maskImage: FEATHER }}>
-            <Clip name="connect" />
+            <Clip name={CLIP} offset={OFFSET} />
           </div>
         </div>
       </div>
@@ -335,8 +347,9 @@ export const WindowSlide: React.FC<FxProps> = ({ t }) => {
         <Pane t={t} px={-cam.dx * 0.8} />
         <Trace t={t} />
       </div>
-      {/* His words under his chin, anchored by the bottom edge so a wrap grows up, never past the safe bottom. */}
-      <Caption name="connect" t={t} size={58} chunk={3} maxWidth={SAFE_IG.w - 40} style={{ top: undefined, bottom: H - (SAFE_IG.y1 - 12) }} />
+      {/* His words under his chin, four at a time ("the exact same features," then "right down to the"), anchored by the
+          bottom edge so a wrap grows up, never past the safe bottom. */}
+      <Caption name={CLIP} t={t} offset={OFFSET} size={58} chunk={4} maxWidth={SAFE_IG.w - 40} style={{ top: undefined, bottom: H - (SAFE_IG.y1 - 12) }} />
     </AbsoluteFill>
   );
 };
@@ -344,8 +357,8 @@ export const WindowSlide: React.FC<FxProps> = ({ t }) => {
 export const windowslide: FxDef = {
   id: "windowslide",
   command: "/window-slide",
-  menu: "A CRT pane slides open on the edit page",
-  clip: "connect",
+  menu: "A CRT pane slides open on the app",
+  clip: CLIP,
   Comp: WindowSlide,
-  thumbT: [16, 24, 28],
+  thumbT: [18, 24, 28],
 };

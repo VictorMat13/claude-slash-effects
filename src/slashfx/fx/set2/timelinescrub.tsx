@@ -1,16 +1,19 @@
-// /timeline-scrub (set 2): split frame. Top half is a CRT screen in 2.5D: far back, the real Resolve 21 Edit page (press
-// shot, its timeline behind ours, blurred by distance, slow eased pan); then the grid; then a timeline with the real
-// Resolve track names V2, V1, A1 down its left side, a ruler, and a coral playhead with its timecode above it. Victor's
-// voice is the green wave on the live scope trace under the timeline. Each word he says leaves his voice as a green
-// packet and runs along the trace to the playhead; when it arrives a clip block (a still of his take) snaps onto V1 at
-// the playhead, eased, its linked audio opens on A1, and the playhead scrubs across the block for as long as the word
-// lasts while A1 fills with his waveform behind it. The timecode counts with the scrub. Claude answers each block with
-// a coral swell at the playhead's foot. His spoken words sit under the trace in coral mono, three at a time.
+// /timeline-scrub (set 2, Remotion take r_movement: "A huge mistake a lot of users make is they don't tell the AI what kind
+// of movement they want."): split frame. Top half is a CRT screen in 2.5D: far back, the real Remotion Studio (Hello World
+// template, its timeline behind ours, blurred by distance, dimmed, slow eased pan); then the grid; then a timeline with
+// Remotion Studio's real layer names ("Remotion logo", "Welcome title", "Editing hint") down its left side, a ruler, and a
+// coral playhead with its Studio-style timecode above it. Victor's voice is the green wave on the live scope trace under
+// the timeline. Each word he says leaves his voice as a green packet and runs along the trace to the playhead; when it
+// arrives a clip block (a still of his take) snaps onto the middle layer at the playhead, eased, its linked audio opens on
+// the layer under it, and the playhead scrubs across the block for as long as the word lasts while his waveform fills in
+// behind it. The timecode counts with the scrub. Claude answers each block with a coral swell at the playhead's foot. His
+// spoken words sit under the trace in coral mono, three at a time. The take starts inside "don't", so the busiest stretch
+// ("don't tell the AI what kind of movement") lands block by block through the full-screen hold.
 // One camera: tight on the playhead, follows it right, pulls out to the whole timeline, holds.
-// Bottom half is Victor's clip "hours", his whole head inside the safe rect.
+// Bottom half is Victor's take, his whole head inside the safe rect, the footage edge to edge.
 // IG safe zone: the timecode, track headers, blocks, packets and words stay inside SAFE_IG (x 60..1000, y 270..1580; above
-// the split y 270..960) at every t, including the camera travel and drift; his whole head stays inside it too. The lanes, the ruler, the grid, the far plate and
-// the white trace are the screen itself and bleed to the frame edge.
+// the split y 270..960) at every t, including the camera travel and drift; his whole head stays inside it too. The lanes,
+// the ruler, the grid, the far plate and the white trace are the screen itself and bleed to the frame edge.
 // Every value is a pure function of t.
 import React from "react";
 import { AbsoluteFill, Img, interpolate, staticFile } from "remotion";
@@ -18,41 +21,48 @@ import { Scope, type ScopeBump } from "../../../artcraft/kit/Scope";
 import { PH } from "../../../artcraft/theme";
 import { CLIPS } from "../../data/clips";
 import { SHOTS, TRACK_NAMES } from "../../data/facts";
-import { CRT, MONO } from "../../kit";
+import { CRT, INTER, MONO } from "../../kit";
 import { CLAMP, EASE, FPS, UI, W, ez, lerp, type FxDef, type FxProps } from "../../theme";
 import { GridLayer, LowerClip, Plate, SPLIT, TRACE_INK, camAt, layerStyle, toScreen, voiceEnv, type CamKeys } from "../shutterstrike";
 
-const CLIP = "hours" as const;
-/** The take starts this many frames in, so he is already saying "These" on the first frame. */
-const OFFSET = 12;
+const CLIP = "r_movement" as const;
+/** The take starts this many frames in (2.25 s, inside "don't"), so the dense run "don't tell the AI what kind of
+ *  movement" lands block by block in the hold: blocks snap at t 6.5, 11.0, 15.3, 16.5, 22.4, 28.1, 29.9, 32.7 ("movement"),
+ *  then 41.1 and 44.4; "kind of movement" is the caption from t 21.1; the take is at 4.21 of its 4.30 s at t 47. */
+const OFFSET = 54;
 /** Frames a word's packet takes from his voice to the playhead: the block snaps when it arrives. */
 const LAG = 7;
 
 // ---- the timeline (world px on the 1080 x 960 screen, the subject plane)
-const HEAD = { l: 140, r: 258 } as const;
-const LANE_L = 270;
+/** Wide enough for Remotion's layer names in Inter 600 at 30 px. */
+const HEAD = { l: 96, r: 356 } as const;
+const LANE_L = 366;
 /** The lanes and the ruler run off the right edge of the screen (they are the screen, not a box). */
 const LANE_R = 1600;
-const TC = { top: 302, h: 50, w: 252, font: 34 } as const;
+const TC = { top: 302, h: 50, w: 196, font: 34 } as const;
 const RULER = { top: 362, h: 28 } as const;
 const LANES = [
   { top: 398, h: 62 },
   { top: 468, h: 124 },
   { top: 600, h: 68 },
 ] as const;
-const V1 = LANES[1];
-const A1 = LANES[2];
+/** Blocks snap onto the middle layer; the linked audio opens on the layer under it. */
+const MAIN = LANES[1];
+const LOW = LANES[2];
 const TRACE_Y = 724;
-const VOICE_X = 200;
+const VOICE_X = 220;
 
-/** Clip blocks: one per spoken word, as long as the word (300 px per second, at least 70 px), end to end from X0. */
-const X0 = 272;
-const PPS = 300;
-const MINW = 70;
+/** Clip blocks: one per word he says on screen (from "don't"), as long as the word (220 px per second, at least 56 px),
+ *  end to end from X0. The ten that land by t 47 end at x 966. */
+const X0 = 368;
+const PPS = 220;
+const MINW = 56;
+const WORDS = CLIPS[CLIP].words;
+const FIRST = WORDS.findIndex((wd) => wd.s * FPS - OFFSET >= -3);
 type Block = { w: string; s: number; e: number; x0: number; x1: number; T0: number; T1: number; say: number };
 const BLOCKS: Block[] = (() => {
   let x = X0;
-  return CLIPS[CLIP].words.map((wd) => {
+  return WORDS.slice(FIRST).map((wd) => {
     const width = Math.max(MINW, (wd.e - wd.s) * PPS);
     const b = { w: wd.w, s: wd.s, e: wd.e, x0: x, x1: x + width, say: wd.s * FPS - OFFSET, T0: wd.s * FPS - OFFSET + LAG, T1: wd.e * FPS - OFFSET + LAG };
     x += width;
@@ -64,30 +74,34 @@ const S0 = BLOCKS[0].s;
 /** The playhead scrubs through one curve: linear through every block edge (it reaches a block's left edge when that
  *  word's packet arrives and its right edge when the word ends; the words are back to back), then a box average over
  *  t - 2 .. t + 2 rounds every corner. An average of a non-decreasing curve never reverses, and no word boundary is a
- *  dead stop. The timecode reads the same curve in take seconds. */
-const KNOT_T = [BLOCKS[0].T0, ...BLOCKS.map((b) => b.T1)];
-const KNOT_X = [BLOCKS[0].x0, ...BLOCKS.map((b) => b.x1)];
-const KNOT_S = [BLOCKS[0].s, ...BLOCKS.map((b) => b.e)];
+ *  dead stop. The timecode reads the same curve in take seconds. Before the first block the playhead is already creeping
+ *  in (14 px from t -14), so it out-runs the camera's ambient drift during the tight hold and never slides backward on
+ *  screen; the timecode stays at zero until the first block. */
+const LEAD = { t: -14, dx: 14 };
+const KNOT_T = [LEAD.t, BLOCKS[0].T0, ...BLOCKS.map((b) => b.T1)];
+const KNOT_X = [X0 - LEAD.dx, BLOCKS[0].x0, ...BLOCKS.map((b) => b.x1)];
+const KNOT_S = [BLOCKS[0].s, BLOCKS[0].s, ...BLOCKS.map((b) => b.e)];
 const SMOOTH = [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2];
 const smoothed = (t: number, out: number[]) => SMOOTH.reduce((a, d) => a + interpolate(t + d, KNOT_T, out, CLAMP), 0) / SMOOTH.length;
 const playheadAt = (t: number) => ({ x: smoothed(t, KNOT_X), tau: smoothed(t, KNOT_S) - S0 });
 const pad2 = (n: number) => String(n).padStart(2, "0");
-/** Resolve-style timecode (24 fps timeline starting at 01:00:00:00) of the playhead. */
+/** Remotion Studio's timecode (minutes:seconds.frames, the template's 30 fps) of the playhead. */
 const timecode = (tau: number) => {
-  const f = Math.round(tau * 24);
-  return `01:00:${pad2(Math.floor(f / 24))}:${pad2(f % 24)}`;
+  const f = Math.round(tau * 30);
+  return `${pad2(Math.floor(f / 1800))}:${pad2(Math.floor(f / 30) % 60)}.${pad2(f % 30)}`;
 };
 /** Smooth min, so the timecode box eases against the right edge instead of stopping dead. */
 const smin = (a: number, b: number, k: number) => -k * Math.log(Math.exp(-a / k) + Math.exp(-b / k));
-const TC_MAX_X = 830;
+const TC_MAX_X = 880;
 
 // ---- camera: tight on the playhead, then one curve that follows it right while pulling out to the whole timeline, hold.
 // The tight hold sits high (the timecode's top at y 280) so his words under the trace clear the tube's bottom shadow.
+// A true hold (no creep) for t 0..6, then one curve to t 26: with the playhead's lead-in it moves right on screen at every t.
 const CAM: CamKeys = {
-  t: [0, 6, 34, 48],
-  x: [392, 398, 540, 540],
+  t: [0, 6, 26, 48],
+  x: [440, 440, 540, 540],
   y: [454, 454, 470, 470],
-  z: [1.3, 1.3, 1.04, 1.03],
+  z: [1.3, 1.3, 1.0, 0.995],
 };
 
 // ---- the trace
@@ -99,7 +113,7 @@ const packet = (t: number, a: number, len: number, x0: number, x1: number, amp: 
 };
 const bumpsAt = (t: number, ph: number): ScopeBump[] => {
   const b: ScopeBump[] = [];
-  // Victor talks (real word timings of "hours").
+  // Victor talks (real word timings of the take).
   b.push({ x: VOICE_X, amp: 2 + voiceEnv(CLIP, t + OFFSET) * (14 + 5 * Math.sin(t * 0.61) + 3 * Math.sin(t * 1.37)), sigma: 24, rgb: PH.userRgb });
   // Claude rides the playhead's foot: a quiet coral hum that swells as each block lands.
   const ans = BLOCKS.reduce((a, bl) => Math.max(a, interpolate(t, [bl.T0 - 1, bl.T0 + 2, bl.T0 + 13], [0, 1, 0], { ...CLAMP, easing: EASE.decel })), 0);
@@ -168,10 +182,10 @@ const Lanes: React.FC = () => (
   </>
 );
 
-/** Track headers: the real Resolve names, on a dark panel at the timeline's left edge. They come in staggered. */
+/** Layer headers: Remotion Studio's real layer names, on a dark panel at the timeline's left edge. They come in staggered. */
 const Headers: React.FC<{ t: number }> = ({ t }) => (
   <>
-    <div style={{ position: "absolute", left: HEAD.l, top: LANES[0].top, width: HEAD.r - HEAD.l, height: A1.top + A1.h - LANES[0].top, borderRadius: 10, background: "rgba(28,31,38,0.94)", boxShadow: "inset 0 0 0 1.5px rgba(233,231,226,0.2)" }} />
+    <div style={{ position: "absolute", left: HEAD.l, top: LANES[0].top, width: HEAD.r - HEAD.l, height: LOW.top + LOW.h - LANES[0].top, borderRadius: 10, background: "rgba(28,31,38,0.94)", boxShadow: "inset 0 0 0 1.5px rgba(233,231,226,0.2)" }} />
     {TRACK_NAMES.map((name, i) => {
       const l = LANES[i];
       const p = ez(t, -6 + i * 3, 2 + i * 3, EASE.enter);
@@ -180,13 +194,14 @@ const Headers: React.FC<{ t: number }> = ({ t }) => (
           key={name}
           style={{
             position: "absolute",
-            left: HEAD.l + 22,
+            left: HEAD.l + 18,
             top: l.top + l.h / 2 - 22,
             height: 44,
-            fontFamily: MONO,
-            fontWeight: 700,
-            fontSize: 34,
+            fontFamily: INTER,
+            fontWeight: 600,
+            fontSize: 30,
             lineHeight: "44px",
+            whiteSpace: "nowrap",
             color: i === 1 ? UI.screenInk : "rgba(236,233,226,0.8)",
             opacity: p,
             transform: `translateX(${(-12 * (1 - p)).toFixed(2)}px)`,
@@ -199,16 +214,16 @@ const Headers: React.FC<{ t: number }> = ({ t }) => (
   </>
 );
 
-/** His take as the clip thumbnail: the still pushed in on his face (natural 1080 x 1920, face center about 675, 840). */
-const THUMB_K = 0.15;
-const FACE = { x: 675, y: 840 };
+/** His take as the clip thumbnail: the still pushed in on his face (natural 1080 x 1920, face center about 555, 790). */
+const THUMB_K = 0.13;
+const FACE = { x: 555, y: 790 };
 
 const ClipBlock: React.FC<{ b: Block; t: number; i: number }> = ({ b, t, i }) => {
   if (t < b.T0 - 0.5) return null;
   const p = ez(t, b.T0, b.T0 + 6, EASE.decel);
   const fade = ez(t, b.T0 - 0.5, b.T0 + 2.5, EASE.enter);
   const bw = b.x1 - b.x0 - 3;
-  const bh = V1.h - 16;
+  const bh = MAIN.h - 16;
   // The still inside keeps pushing in slowly (ambient), each block framed a touch differently.
   const life = ez(t, b.T0, b.T0 + 40, EASE.inOut);
   const k = THUMB_K * (1.02 + 0.05 * life);
@@ -218,7 +233,7 @@ const ClipBlock: React.FC<{ b: Block; t: number; i: number }> = ({ b, t, i }) =>
       style={{
         position: "absolute",
         left: b.x0 + 1.5,
-        top: V1.top + 8,
+        top: MAIN.top + 8,
         width: bw,
         height: bh,
         borderRadius: 7,
@@ -247,12 +262,12 @@ const ClipBlock: React.FC<{ b: Block; t: number; i: number }> = ({ b, t, i }) =>
   );
 };
 
-/** Linked audio on A1: opens with its clip, then his waveform fills in up to the playhead. */
+/** Linked audio on the layer under it: opens with its clip, then his waveform fills in up to the playhead. */
 const AudioBlock: React.FC<{ b: Block; t: number; ph: number }> = ({ b, t, ph }) => {
   if (t < b.T0 - 0.5) return null;
   const open = ez(t, b.T0 + 1, b.T0 + 6, EASE.decel);
   const bw = b.x1 - b.x0 - 3;
-  const bh = A1.h - 12;
+  const bh = LOW.h - 12;
   const bars: React.ReactNode[] = [];
   for (let x = 5; x < bw - 3; x += 5) {
     const wx = b.x0 + 1.5 + x;
@@ -269,7 +284,7 @@ const AudioBlock: React.FC<{ b: Block; t: number; ph: number }> = ({ b, t, ph })
       style={{
         position: "absolute",
         left: b.x0 + 1.5,
-        top: A1.top + 6,
+        top: LOW.top + 6,
         width: bw,
         height: bh,
         borderRadius: 6,
@@ -338,9 +353,12 @@ export const TimelineScrub: React.FC<FxProps> = ({ t }) => {
       <div style={{ position: "absolute", left: 0, top: 0, width: W, height: SPLIT, overflow: "hidden" }}>
         <CRT>
           <AbsoluteFill style={{ background: UI.screen }}>
-            {/* Far plate: the real Edit page, its timeline sitting behind ours, panning slowly with the scrub. */}
-            <Plate cam={cam} k={0.6} src={SHOTS.edit} nw={5120} nh={2880} scale={0.5} x={-330 - 180 * pan} y={-640 - 14 * pan} blur={5} bright={0.44} tilt={4} />
+            {/* Far plate: the real Remotion Studio pushed in on its timeline (layer list behind our headers, its blue
+                sequence bars behind our lanes), dimmed so they never compete, panning slowly with the scrub. */}
+            <Plate cam={cam} k={0.6} src={SHOTS.edit} nw={3840} nh={2160} scale={1.1} x={-514 - 120 * pan} y={-1500 - 14 * pan} blur={5} bright={0.4} tilt={4} />
             <GridLayer cam={cam} k={0.82} t={t} />
+            {/* the Studio's white preview canvas sits above the frame top; this shade keeps its last rows from glowing there */}
+            <div style={{ position: "absolute", left: 0, top: 0, width: W, height: 330, background: "linear-gradient(180deg, rgba(16,18,23,0.92) 0%, rgba(16,18,23,0.6) 55%, rgba(16,18,23,0) 100%)" }} />
             <div style={layerStyle(cam, 1)}>
               <Lanes />
               <svg width={W} height={SPLIT} viewBox={`0 0 ${W} ${SPLIT}`} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
@@ -370,8 +388,8 @@ export const TimelineScrub: React.FC<FxProps> = ({ t }) => {
           </AbsoluteFill>
         </CRT>
       </div>
-      {/* s 0.94, tx -7 centres the sharp take (its sides feather into the blurred copy equally); hair top ~971, chin <= ~1560 */}
-      <LowerClip name={CLIP} t={t} s={0.94} tx={-7} ty={-505} offset={OFFSET} />
+      {/* His head (x 350..760, y 545..1040 in the take) at s 1: the footage fills the half edge to edge, hair top ~1005, chin ~1504. */}
+      <LowerClip name={CLIP} t={t} s={1} tx={0} ty={-500} offset={OFFSET} />
     </AbsoluteFill>
   );
 };
@@ -380,7 +398,7 @@ export const timelinescrub: FxDef = {
   id: "timelinescrub",
   command: "/timeline-scrub",
   menu: "A playhead scrubs your words onto the track",
-  clip: "hours",
+  clip: "r_movement",
   Comp: TimelineScrub,
-  thumbT: [14, 26, 38],
+  thumbT: [12, 22, 30],
 };

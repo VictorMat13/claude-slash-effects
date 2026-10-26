@@ -1,4 +1,5 @@
-// /headline-feed (set 3, builder S3-A). Victor's footage full frame. The real headlines (HEADLINES in data/facts.ts,
+// /headline-feed (set 3, builder S3-A; retargeted 2026-10-26 to the ArtCraft take, clip a_hook, facts_artcraft.ts via the
+// SET switch). Victor's footage full frame. The real headlines (HEADLINES in data/facts.ts,
 // verbatim, with publication and date small) arrive one every 3 frames from the bottom of the safe rect as dark CRT cards
 // with a keyline. The stack is one continuous depth value: every new card rises in at the front (lowest), standing up from
 // a slight tilt, and pushes the cards before it one step back and up (smaller, dimmer, a touch of blur) so each older card
@@ -7,8 +8,9 @@
 // One live scope trace runs up the stack's left edge: a coral packet runs up it into each card as it lands (the card's
 // keyline answers in coral), the packet stays on the line beside its card and rides back with it, and his voice is the
 // green amplitude level with his eyes. In the hold the feed refreshes twice: a coral packet runs up the whole stack.
-// Camera (KEY_T, hold, travel, hold): opens tight and low on the first card (card plane 1.08), then rides up with the
-// stack and pulls back (1.0) while his footage, the far plane, moves less (1.06 to 1.035, never past 1.07); a slow drift.
+// Camera (KEY_T, hold, travel, hold): opens low and close on the first card (card plane 1.04), then rides up with the
+// stack and pulls back (1.0, settled when the last card lands at t 24) while his footage, the far plane, moves less (1.06
+// to 1.035, never past 1.07); a slow drift. Only two cards stay up behind the front one: his chin sits at about y 955.
 // Instagram safe zone: every card, its text and the packets stay inside SAFE_IG (x 100..980, y 290..1520) at every t,
 // including the entrance, the camera travel and the drift; the footage and the trace line bleed.
 import React from "react";
@@ -20,10 +22,11 @@ import { Clip, INTER, MONO } from "../../kit";
 import { CLAMP, EASE, H, SAFE_IG, UI, W, ez, lerp, type FxDef, type FxProps } from "../../theme";
 import { voiceEnv } from "../shutterstrike";
 
-const CLIP = "subtitles" as const;
+const CLIP = "a_hook" as const;
 
-/** Feed order (indices into HEADLINES): oldest first, the front card last. */
-const ORDER = [5, 3, 1, 0, 4, 6, 2] as const;
+/** Feed order (indices into HEADLINES, the ArtCraft set): by date, and in front the one that says what he says
+ *  (HotHardware: "Dev Uses AI To Build Clones Of Photoshop And Entire Adobe Suite For Free"). */
+const ORDER = [0, 1, 3, 4, 5, 6, 2] as const;
 const FEED = ORDER.map((i) => HEADLINES[i]);
 
 // ---------------------------------------------------------------- card geometry (card plane, final framing)
@@ -37,7 +40,7 @@ const SOURCE_H = TYPE.source * 1.2;
 const DATE_H = TYPE.date * 1.2;
 /** Headline lines per card at this width (Inter 700 34 px, 436 px measure, balanced), measured on the stills: the card
  *  hugs its headline so the date sits right under it. */
-const LINES = [3, 2, 3, 3, 3, 2, 3] as const;
+const LINES = [4, 3, 4, 4, 3, 4, 3] as const;
 const cardH = (lines: number) => Math.round(PAD.top + SOURCE_H + 8 + lines * LINE_H + 10 + DATE_H + PAD.bottom);
 const HS = LINES.map(cardH);
 /** The front card's bottom edge (40 px above the safe bottom: room for the entrance, the drift and the float). */
@@ -85,7 +88,8 @@ const stackAt = (t: number): (Look | null)[] => {
     const home = B + 26 * u - h * s;
     const top: number = inFront === null ? home : lerp(home, inFront - VIS * sd, Math.min(1, d));
     // the glass turns opaque in the first frames of the rise (it is moving, tilting and blurred), the text types in after
-    const op = Math.min(1, 2.4 * (1 - u)) ** 0.8 * interpolate(d, [2.8, 3.8], [1, 0], CLAMP);
+    // the third card back fades out as it goes: the stack stays below his chin (about y 955 in this take)
+    const op = Math.min(1, 2.4 * (1 - u)) ** 0.8 * interpolate(d, [2.0, 2.8], [1, 0], CLAMP);
     if (op > 0.003) looks[i] = { s, top, bottom: top + h * s, op, blur: 0.75 * d + 3 * u, dim: Math.min(0.55, 0.17 * d), rx: TILT * u, d };
     // even unseen, this card is the reference for the one behind it
     inFront = top;
@@ -103,8 +107,8 @@ const sOf = (y: number) => S_BASE - y;
 const KEY_T = [0, 6, 24, 48];
 const key = (t: number, v: number[]) => interpolate(t, KEY_T, v, { ...CLAMP, easing: EASE.travel });
 /** card plane: zoom anchored on the front card's bottom-left corner, and the rise (the scene slides down as the camera rides up) */
-const Z = [1.08, 1.075, 1.0, 1.0];
-const RISE = [-30, -28, 0, 0];
+const Z = [1.04, 1.038, 1.0, 1.0];
+const RISE = [-12, -11, 0, 0];
 /** far plane (his footage): parallax, never past 1.07 */
 const CLIP_S = [1.06, 1.058, 1.035, 1.033];
 const CLIP_RISE = [-14, -13, 0, 0];
@@ -114,8 +118,8 @@ const CLIP_ORIGIN = { x: 340, y: 900 };
 const DRIFT = { x: 4, y: 3 };
 const NEAR = 1.25;
 
-/** His voice: on the trace level with his eyes, beside his head. */
-const VOICE_Y = 800;
+/** His voice: on the trace level with his eyes, beside his head (eyes about y 670 in this take). */
+const VOICE_Y = 670;
 const TRACE_INK = "rgba(243,241,236,0.55)";
 
 const gauss = (x: number, c: number, sg: number) => Math.exp(-((x - c) ** 2) / (2 * sg * sg));

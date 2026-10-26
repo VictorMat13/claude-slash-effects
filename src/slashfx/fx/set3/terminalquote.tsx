@@ -1,10 +1,11 @@
-// /terminal-quote (set 3, builder S3-B). Victor's "ceo" take; beside his head (right side) a tall CRT terminal pane in the
-// CRT Scope look types Grant Petty's press-release quote (PETTY.quote, verbatim) line by line in mono with a block
+// /terminal-quote (set 3, builder S3-B; retargeted 2026-10-26 to the ArtCraft take "a_years"). Victor's take; beside his
+// head (right side) a tall CRT terminal pane in the CRT Scope look types the quote in data/facts.ts (PETTY.quote, verbatim:
+// for set 3 Brandon Thomas, founder of ArtCraft, as quoted by Ars Technica) line by line in mono with a block
 // cursor; the two PETTY.cards fragments turn coral as they are typed; the last lines are a prompt glyph with
 // PETTY.name and PETTY.role. A live scope trace runs under the pane (and under his chin): every line end fires a coral
 // packet that runs along it to his voice (green, from the real word timings). His words as the caption under his chin.
-// Layout: in this take his head (hair and ears) spans x 313..800, so the pane cannot sit beside it with the face
-// centered. The footage is set left (a two-shot: him left, the terminal right) and the strip it uncovers on the right
+// Layout: in this take his head (hair and ears) spans x 335..810 over the first two seconds (measured), leaving about 190 px
+// beside it, so the pane cannot sit there with the face centered. The footage is set left (a two-shot: him left, the terminal right) and the strip it uncovers on the right
 // is filled by a mirrored, blurred, dimmed copy of the take, feathered at the seam (never letterboxed).
 // Camera (one KEY_T timeline, hold, travel, hold): opens tight on the cursor (inside the tube, content zoom 1.85 that
 // follows the cursor like a carriage), holds while the first coral fragment types, then pulls out (t 6 to 21) to the whole quote
@@ -20,6 +21,9 @@ import { PETTY } from "../../data/facts";
 import { Caption, Clip, DarkGrid, MONO } from "../../kit";
 import { CLAMP, EASE, H, SAFE_IG, UI, W, ez, lerp, type FxDef, type FxProps } from "../../theme";
 import { voiceEnv } from "../shutterstrike";
+
+/** Victor's take for this effect (set 3: the ArtCraft take). */
+const CLIP = "a_years" as const;
 
 // ---------------------------------------------------------------- camera: one keyframe timeline
 const KEY_T = [0, 6, 21, 48];
@@ -83,10 +87,11 @@ const NAME_Y = PAD_T + LINES.length * LH + GAP_CREDIT;
 const ROLE_Y = NAME_Y + LH;
 
 // ---------------------------------------------------------------- typing schedule (24 fps, t = 0 at the card resolve)
-/** Typing already runs when the card resolves (four lines are up, so the tight shot is full of text). The first coral
- *  fragment types on the tight hold (t 0 to 7), the lines speed up on the pull, the second fragment lands as it ends. */
-const T0 = -13;
-const DUR = [3.2, 3.2, 3.2, 3.2, 3.4, 3.4, 2.4, 2.1, 1.9, 1.8, 1.8, 1.8, 2.0];
+/** Typing already runs when the card resolves (two lines are up). The first coral fragment ("1:1 functional
+ *  equivalents", lines 2 to 4) types on the tight hold, the lines speed up on the pull and the second fragment types on it,
+ *  the credit types as the camera settles. Durations are per wrapped line (nine lines at 19 columns). */
+const T0 = -8;
+const DUR = [3.2, 3.3, 3.3, 3.3, 2.8, 2.8, 2.8, 2.4, 1.6];
 const durOf = (i: number) => DUR[Math.min(i, DUR.length - 1)];
 type Slot = { a: number; b: number; len: number };
 const SLOTS: Slot[] = (() => {
@@ -146,11 +151,12 @@ const focusAt = (t: number) => {
 };
 
 // ---------------------------------------------------------------- frame layout (screen px)
-/** His head in the take (hair and ears over the whole line): x 313..800, hair top 497, chin 1095; chin x about 565. */
-const HEAD_R = 800;
-const CHIN = { x: 565, y: 1095 };
+/** His head in a_years over the first two seconds (measured every 0.125 to 0.5 s): hair and ears x 335..810, hair top 400;
+ *  his chin's lowest point is y 950 (960 with margin), chin x about 575. */
+const HEAD_R = 810;
+const CHIN = { x: 575, y: 960 };
 /** His take scales about this point (the middle of his face). */
-const O = { x: 560, y: 800 };
+const O = { x: 565, y: 660 };
 /** Clear space between the pane's worst corner and the safe rect, and between his ear and the pane. */
 const EDGE = 6;
 const GAP = 14;
@@ -182,17 +188,19 @@ const REACH = (() => {
 /** The pane hugs the safe right edge at its worst frame; its bottom sits just above the trace. */
 const PANE_CX = Math.floor(SAFE_IG.x1 - EDGE - REACH.right - DRIFT.x * NEAR);
 const PANE_X0 = PANE_CX - PANE_W / 2;
-const PANE_BOTTOM = 1100;
+/** The trace runs CHIN_CLEAR under his chin's lowest point at the opening zoom; the pane ends above it, the caption under it. */
+const CHIN_CLEAR = 36;
+const TY = Math.ceil(O.y + (CHIN.y - O.y) * ZC_KEYS[0] + CHIN_CLEAR);
+const PANE_BOTTOM = TY - 44;
 const PANE_CY = PANE_BOTTOM - PANE_H / 2;
 /** His take moves left so his ear clears the pane's worst inner edge by GAP at the opening zoom (1.03) and the drift.
- *  (Safe rect 60..1000 since 00:50: the pane sits at about x 599..983, his take about 229 px left.) */
+ *  (Safe rect 60..1000: the pane sits at about x 599..983 and y 438..962, his take about 242 px left.) */
 const PANE_LEFT_WORST = PANE_CX - REACH.left - DRIFT.x * NEAR;
 const DX = Math.floor(PANE_LEFT_WORST - GAP - DRIFT.x - (O.x + (HEAD_R - O.x) * ZC_KEYS[0]));
 
-/** The trace under the pane and under his chin; the caption under it. */
-const TY = 1146;
+/** His voice sits on the trace under his chin; the caption under the trace. */
 const VOICE_X = O.x + (CHIN.x - O.x) + DX;
-const CAPTION_Y = 1180;
+const CAPTION_Y = TY + 34;
 const CAPTION_SIZE = 58;
 
 // ---------------------------------------------------------------- the trace: his voice, a coral packet per line end
@@ -204,7 +212,7 @@ const PACKETS = SLOTS.map((s, i) => {
 });
 const traceBumps = (t: number): ScopeBump[] => {
   const bumps: ScopeBump[] = [
-    { x: VOICE_X, amp: 3 + 14 * voiceEnv("ceo", t) * (0.85 + 0.15 * Math.sin(t * 0.9)), sigma: 34, rgb: PH.userRgb },
+    { x: VOICE_X, amp: 3 + 14 * voiceEnv(CLIP, t) * (0.85 + 0.15 * Math.sin(t * 0.9)), sigma: 34, rgb: PH.userRgb },
   ];
   for (const p of PACKETS) {
     if (t < p.at - 1 || t > p.at + RUN + 2) continue;
@@ -266,7 +274,7 @@ const Screen: React.FC<{ t: number; zi: number }> = ({ t, zi }) => {
   const f = focusAt(t);
   const tight = (zi - 1) / (ZI_KEYS[0] - 1);
   const ax = PANE_W * 0.62;
-  const ay = CONTENT_H * 0.8;
+  const ay = CONTENT_H * 0.6;
   const tx = Math.min(0, Math.max(PANE_W * (1 - zi), ax - f.x * zi));
   const ty = Math.min(TOP_SLACK * tight, Math.max(CONTENT_H * (1 - zi), ay - f.y * zi));
   const cur = cursorAt(t);
@@ -347,10 +355,10 @@ export const TerminalQuote: React.FC<FxProps> = ({ t }) => {
         }}
       >
         <div style={{ position: "absolute", left: W - 40, top: 0, width: W, height: H, transform: "scaleX(-1)", filter: "blur(26px) brightness(0.2) saturate(0.7)" }}>
-          <Clip name="ceo" />
+          <Clip name={CLIP} />
         </div>
         <div style={{ position: "absolute", left: 0, top: 0, width: W, height: H, WebkitMaskImage: featherMask, maskImage: featherMask }}>
-          <Clip name="ceo" />
+          <Clip name={CLIP} />
         </div>
       </div>
       {/* the terminal side of the room sits a little darker */}
@@ -390,7 +398,7 @@ export const TerminalQuote: React.FC<FxProps> = ({ t }) => {
           </CRT>
         </div>
       </div>
-      <Caption name="ceo" t={t} y={CAPTION_Y} size={CAPTION_SIZE} maxWidth={SAFE_IG.w - 40} />
+      <Caption name={CLIP} t={t} y={CAPTION_Y} size={CAPTION_SIZE} maxWidth={SAFE_IG.w - 40} />
     </AbsoluteFill>
   );
 };
@@ -399,7 +407,7 @@ export const terminalquote: FxDef = {
   id: "terminalquote",
   command: "/terminal-quote",
   menu: "A quote typed on a CRT terminal",
-  clip: "ceo",
+  clip: CLIP,
   Comp: TerminalQuote,
   thumbT: [30, 36, 44],
 };

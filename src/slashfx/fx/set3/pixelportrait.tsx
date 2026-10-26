@@ -1,11 +1,12 @@
-// /pixel-portrait (set 3, builder S3-A). Victor's footage full frame, drawn through the CRT tube as an LED dot matrix:
-// every 14 px cell of the take gets one lit dot whose radius follows the cell's mean brightness, in the cell's color,
-// over a faint unlit LED on every cell (a fixed-resolution canvas, painted from each decoded frame). Where his voice is loud the dots resolve into the real footage in a soft
-// circle around his face (the circle breathes with each word's loudness, from the real word timings of the take);
-// when he pauses it falls back to dots. The live scope trace runs under the portrait: his voice is the green amplitude
-// under his face, every word sends two green packets out along the line, and Claude's coral packet runs in on "editing".
-// Camera: one slow push 1.0 to 1.04 on his face (eased), with a 3 px drift hidden under the tube bezel.
-// His words as the caption at the bottom, inside SAFE_IG (x 100..980, y 290..1520) at every t.
+// /pixel-portrait (set 3, builder S3-A; retargeted 2026-10-26 to the ArtCraft take, clip a_nocode). Victor's footage full
+// frame, drawn through the CRT tube as an LED dot matrix: every 14 px cell of the take gets one lit dot whose radius follows
+// the cell's mean brightness, in the cell's color, over a faint unlit LED on every cell (a fixed-resolution canvas, painted
+// from each decoded frame). From "never" on, where his voice is loud the dots resolve into the real footage in a soft
+// circle around his face (it breathes with each word's loudness, from the real word timings of the take); when he pauses
+// it falls back to dots. The live scope trace runs under the portrait: his voice is the green amplitude under his face,
+// every word sends two green packets out along the line, and Claude's coral packet lands under his face on "code", where
+// the tube gives one soft wobble. Camera: one slow push 1.0 to 1.04 on his face (eased), with a 3 px drift hidden under
+// the tube bezel. His words as the caption at the bottom, inside SAFE_IG (x 100..980, y 290..1520) at every t.
 import React from "react";
 import { AbsoluteFill, OffthreadVideo, interpolate, staticFile } from "remotion";
 import { Scope, type ScopeBump } from "../../../artcraft/kit/Scope";
@@ -15,7 +16,10 @@ import { CLIPS } from "../../data/clips";
 import { Caption, Clip } from "../../kit";
 import { CLAMP, EASE, FPS, H, SAFE_IG, W, ez, lerp, type FxDef, type FxProps } from "../../theme";
 
-const CLIP = "boring" as const;
+const CLIP = "a_nocode" as const;
+/** The take starts this many frames in (on "if"), so "code" (2.79 s) lands at t 32, before the reel scrolls the effect away
+ *  (red team, 2026-10-26); the footage lasts through t 41.8. Footage, wall, voice and caption all use it. */
+const OFFSET = 35;
 const BG = "#0E0D10";
 
 // ---------------------------------------------------------------- the LED wall
@@ -89,21 +93,27 @@ const LedWall: React.FC = () => {
     <>
       <canvas ref={wall} width={W} height={H} style={{ position: "absolute", left: 0, top: 0, width: W, height: H }} />
       {/* the decoded take, unseen: it only feeds the wall */}
-      <OffthreadVideo src={staticFile(CLIPS[CLIP].file)} muted onVideoFrame={onVideoFrame} style={{ position: "absolute", left: 0, top: 0, width: 2, height: 2, opacity: 0 }} />
+      <OffthreadVideo src={staticFile(CLIPS[CLIP].file)} trimBefore={OFFSET} muted onVideoFrame={onVideoFrame} style={{ position: "absolute", left: 0, top: 0, width: 2, height: 2, opacity: 0 }} />
     </>
   );
 };
 
 // ---------------------------------------------------------------- his voice
-/** Where his face sits in this take (head about x 390..870, hair top 480, chin 1080): the resolve circle's center. */
-const FACE = { x: 636, y: 812 };
+/** His face in this take (head at rest about x 310..760, hair top 420, chin 955): the resolve circle's center. */
+const FACE = { x: 556, y: 700 };
 const R_MAX = 400;
-/** Loudness per word (stress), from the real word timings: "boring" and "editing" carry the line. */
-const LOUD: Record<string, number> = { to: 0.6, do: 0.68, the: 0.58, boring: 1, editing: 0.96, for: 0.74, "you.": 0.9 };
 const WORDS = CLIPS[CLIP].words;
+/** Frame (effect t) at which a word starts, with the clip offset. */
+const at = (sec: number) => sec * FPS - OFFSET;
+const word = (w: string) => WORDS.find((x) => x.w === w) ?? WORDS[WORDS.length - 1];
+/** The face resolves from "never" (t 7): earlier words only talk on the trace. Loudness per word (stress), from the real
+ *  word timings: "written" and "code" carry the line. */
+const RESOLVE_FROM = word("never").s;
+const LOUD: Record<string, number> = { "you've": 0.86, never: 0.96, written: 1, a: 0.56, line: 0.9, of: 0.62, "code.": 1 };
 const loudAt = (sec: number) => {
   let v = 0;
   for (const w of WORDS) {
+    if (w.s < RESOLVE_FROM) continue;
     const k = LOUD[w.w] ?? 0.7;
     const shape = interpolate(sec, [w.s - 0.05, w.s + 0.05, w.e, w.e + 0.14], [0, 1, 0.72, 0], CLAMP);
     v = Math.max(v, k * shape);
@@ -116,25 +126,33 @@ const loudness = (t: number) => {
   let n = 0;
   for (let k = 0; k <= 4; k++) {
     const wgt = 5 - k;
-    s += wgt * loudAt((t - k) / FPS);
+    s += wgt * loudAt((t - k + OFFSET) / FPS);
     n += wgt;
   }
   return s / n;
 };
+/** His voice on the trace, every word in the window (0..1, softened). */
+const voiceAt = (t: number) => {
+  const sec = (t + OFFSET) / FPS;
+  let v = 0;
+  for (const w of WORDS) v = Math.max(v, interpolate(sec, [w.s - 0.05, w.s + 0.03, w.e - 0.02, w.e + 0.08], [0, 1, 1, 0], CLAMP));
+  return v;
+};
 
 // ---------------------------------------------------------------- the trace
-const TRACE_Y = 1296;
+/** Under the portrait: between his chin (about 955) and the caption band. */
+const TRACE_Y = 1196;
 const TRACE_INK = "rgba(243,241,236,0.6)";
-/** Claude's packet: runs in from the right edge and lands under his face on "editing". */
-const EDITING = WORDS.find((w) => w.w === "editing") ?? WORDS[0];
-const CLAUDE_LAND = EDITING.s * FPS + 2;
-const bumpsAt = (t: number, loud: number): ScopeBump[] => {
+/** Claude's packet: runs in from the right edge and lands under his face on "code". */
+const CODE = word("code.");
+const CLAUDE_LAND = at(CODE.s);
+const bumpsAt = (t: number): ScopeBump[] => {
   const out: ScopeBump[] = [];
   // his voice under his face
-  out.push({ x: FACE.x, amp: 3 + 20 * loud * (0.88 + 0.12 * Math.sin(t * 0.9)), sigma: 74, rgb: PH.userRgb });
+  out.push({ x: FACE.x, amp: 3 + 18 * voiceAt(t) * (0.82 + 0.18 * Math.sin(t * 0.9)), sigma: 74, rgb: PH.userRgb });
   // each word sends two packets out along the line
   for (const w of WORDS) {
-    const s = w.s * FPS;
+    const s = at(w.s);
     if (t < s) continue;
     const u = ez(t, s, s + 16, EASE.decel);
     const amp = 13 * (LOUD[w.w] ?? 0.7) * ez(t, s, s + 2, EASE.enter) * (1 - ez(t, s + 6, s + 16, EASE.inOut));
@@ -143,7 +161,7 @@ const bumpsAt = (t: number, loud: number): ScopeBump[] => {
       out.push({ x: FACE.x + 620 * u, amp, sigma: 40, rgb: PH.userRgb });
     }
   }
-  // Claude's packet in from the right, then it keeps talking quietly under his face
+  // Claude's packet in from the right, landing under his face on "code", then it keeps talking quietly there
   const run = ez(t, CLAUDE_LAND - 12, CLAUDE_LAND, EASE.travel);
   const env = interpolate(t, [CLAUDE_LAND - 12, CLAUDE_LAND - 9, CLAUDE_LAND, CLAUDE_LAND + 16], [0, 1, 1, 0.35], CLAMP);
   if (env > 0.01) out.push({ x: lerp(W + 60, FACE.x + 70, run), amp: 17 * env * (0.9 + 0.1 * Math.sin(t * 0.7)), sigma: 34, rgb: PH.claudeRgb });
@@ -157,9 +175,8 @@ const NEAR = 1.8;
 const CAPTION_BOTTOM = SAFE_IG.y1 - 24;
 /** A soft dark band behind the caption, so his words read over the lit hands. */
 const SCRIM_TOP = 1330;
-/** One soft tracking wobble as the face resolves on "boring" (a story beat, CRT Scope rule). */
-const BORING = WORDS.find((w) => w.w === "boring") ?? WORDS[0];
-const GLITCH = [Math.round(BORING.s * FPS)];
+/** One soft tracking wobble on "code" (a story beat, CRT Scope rule). */
+const GLITCH = [Math.round(at(CODE.s))];
 
 export const PixelPortrait: React.FC<FxProps> = ({ t }) => {
   const z = interpolate(t, [0, 48], PUSH, { ...CLAMP, easing: EASE.inOut });
@@ -182,7 +199,7 @@ export const PixelPortrait: React.FC<FxProps> = ({ t }) => {
           <LedWall />
           {r > 2 ? (
             <AbsoluteFill style={{ WebkitMaskImage: mask, maskImage: mask }}>
-              <Clip name={CLIP} style={{ filter: "brightness(1.12)" }} />
+              <Clip name={CLIP} offset={OFFSET} style={{ filter: "brightness(1.12)" }} />
             </AbsoluteFill>
           ) : null}
         </div>
@@ -194,9 +211,9 @@ export const PixelPortrait: React.FC<FxProps> = ({ t }) => {
         />
         <AbsoluteFill style={{ transform: `translate(${(dx * (NEAR - 1)).toFixed(2)}px, ${(dy * (NEAR - 1)).toFixed(2)}px)` }}>
           <svg width={W} height={H} style={{ position: "absolute", left: 0, top: 0 }}>
-            <Scope frame={t} x0={-40} x1={W + 40} y={TRACE_Y} bumps={bumpsAt(t, loud)} hum={1.5} stroke={3.2} color={TRACE_INK} />
+            <Scope frame={t} x0={-40} x1={W + 40} y={TRACE_Y} bumps={bumpsAt(t)} hum={1.5} stroke={3.2} color={TRACE_INK} />
           </svg>
-          <Caption name={CLIP} t={t} size={60} chunk={3} maxWidth={SAFE_IG.w - 40} style={{ top: undefined, bottom: H - CAPTION_BOTTOM }} />
+          <Caption name={CLIP} t={t} offset={OFFSET} size={60} chunk={3} maxWidth={SAFE_IG.w - 40} style={{ top: undefined, bottom: H - CAPTION_BOTTOM }} />
         </AbsoluteFill>
       </AbsoluteFill>
     </CRT>

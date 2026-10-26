@@ -39,8 +39,6 @@ const RX_KEYS = [6, 5.4, 1.4, 1.1];
 const FLOAT = 3;
 const RY = 0.6;
 const PERSP = 1600;
-/** the wheel's scale inside the pane (pane px per source px): pulls out slower than the pane */
-const S_KEYS = [1.42, 1.41, 1.33, 1.32];
 const camAt = (t: number) => ({
   z: key(t, Z_KEYS),
   rx: key(t, RX_KEYS),
@@ -56,8 +54,9 @@ const camAt = (t: number) => ({
 const CLIP_ORIGIN = "540px 1840px";
 
 // ---------------------------------------------------------------- pane size (crtgraph's fit, our own keys)
-/** The pane's top edge, under his jaw (chin about 1033 on screen at the rest push); the caption sits between. */
-const CARD_TOP = 1126;
+/** The pane's top edge. The recut plate (crop x 1260) has his head at y 500..1080, so his chin sits at about 1055 on
+ *  screen at the rest push (1.033 about the bottom edge): the caption line (1066..1133) clears it, the pane clears that. */
+const CARD_TOP = 1144;
 const EDGE = 8;
 const project = (x: number, y: number, z: number, rx: number, ry: number) => {
   const a = (rx * Math.PI) / 180;
@@ -104,6 +103,10 @@ const FIELD_H = CARD_H * (1 + 2 * OVER_Y);
 const TUBE_W = 1080;
 const K = FIELD_W / TUBE_W;
 const TUBE_H = FIELD_H / K;
+
+/** the wheel's scale inside the pane (pane px per source px): pulls out slower than the pane; set for a 388 px pane and
+ *  scaled with the pane so the "Global" label and the trace keep their clearance */
+const S_KEYS = [1.42, 1.41, 1.33, 1.32].map((v) => (v * CARD_H) / 388);
 
 // ---------------------------------------------------------------- pane layout (pane px)
 /** wheel center height: at rest the label clears the top edge and the disc stands on the trace */
@@ -311,5 +314,6 @@ export const colordial: FxDef = {
   menu: "A color wheel grades your footage live",
   clip: "plate",
   Comp: ColorDial,
-  thumbT: [18, 30, 44],
+  // the latest sampled t (about thumbT + 9) stays before the clip's last frame (49.6), so his footage never freezes in the grid
+  thumbT: [18, 30, 40],
 };

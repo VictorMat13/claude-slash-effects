@@ -1,12 +1,15 @@
-// /split-flap (set 3, builder S3-B). Victor's "surface" take full frame; under his chin a CRT tube (crtgraph's
-// placement: top below his jaw, bottom inside the safe rect) holds three split-flap displays, mechanical flip boards.
-// Each module flips top to bottom through a few characters of its drum (the upper flap falls, the lower flap lands),
-// eased, faster first and slower into the landing, staggered left to right, and lands on the verified counts (COUNTS:
-// 20, 25+, 100+) with the COUNTS labels under them, COUNTS_TITLE above with the real Resolve mark, COUNTS_SOURCE small
-// below. Behind the boards, far back and out of focus, the real Fusion page (press shot) pans across its viewer.
+// /split-flap (set 3, builder S3-B; retargeted 2026-10-26 to the ArtCraft take "a_pay"). Victor's take full frame; under
+// his chin a CRT tube (crtgraph's placement: top below his jaw, bottom inside the safe rect) holds three split-flap
+// displays, mechanical flip boards. Each module flips top to bottom through a few characters of its drum (the upper flap
+// falls, the lower flap lands), eased, faster first and slower into the landing, staggered left to right, and lands on the
+// verified counts in data/facts.ts (set 3: 16, 68, 500+ from the PhotoCraft README) with the COUNTS labels under them,
+// COUNTS_TITLE above with the product mark (LOGOS.resolve), COUNTS_SOURCE small below. Behind the boards, far back and out
+// of focus, the real screenshot SHOTS.fusion (set 3: the FilmCraft timeline close-up) pans across its clips.
 // One live scope trace runs under the boards: a coral packet runs in along it and fires on each board as it lands.
+// The boards land on his words: the take starts OFFSET frames in, so "apps", "pay" and "hundreds" fall in the effect's
+// visible window (t 0 to 42); "year" is spoken at about t 58, after the reel has scrolled on.
 // Camera (one KEY_T timeline, hold, travel, hold): opens tight on the first display (inside the tube, content zoom
-// 1.75) while it flips and lands, then pulls out (t 8 to 22) to all three boards; the tube plane settles from 1.06 and
+// 1.75) while it flips and lands, then pulls out (t 9 to 23) to all three boards; the tube plane settles from 1.04 and
 // a 6 degree tilt, and the far plane (his take) moves less (1.07 to 1.035, parallax) and racks into focus.
 // Safe zone (SAFE_IG, 60..1000 x 270..1580 since 2026-10-26 00:50): the tube's worst frame (the opening zoom and tilt
 // with the float and turn) is sized to land inside it; its top sits under his jaw and his words sit above it.
@@ -20,7 +23,7 @@ import { Caption, Clip, INTER, MONO } from "../../kit";
 import { CLAMP, EASE, SAFE_IG, ez, lerp, type FxDef, type FxProps } from "../../theme";
 
 // ---------------------------------------------------------------- camera: one keyframe timeline
-const KEY_T = [0, 8, 22, 48];
+const KEY_T = [0, 9, 23, 48];
 const key = (t: number, v: number[]) => interpolate(t, KEY_T, v, { ...CLAMP, easing: EASE.travel });
 /** tube plane zoom (anchored on its top center) and tilt; the content zoom inside the tube (tight on display 1) */
 const Z_KEYS = [1.04, 1.037, 1.0, 0.99];
@@ -31,12 +34,16 @@ const RY = 0.6;
 const PERSP = 1600;
 
 // ---------------------------------------------------------------- the tube (on-screen px), sized to its worst frame
-/** His take scales about (540, 1840) from 1.07 down to 1.033 (CLIP_S). His chin's lowest point over the first two
- *  seconds of the take is y 1085 (measured every 0.125 s; 1090 with margin), so on screen it is lowest at the smallest
- *  scale. His words sit at least CHIN_CLEAR under it, and the tube's top edge sits under his words. */
+/** Victor's take for this effect (set 3: the ArtCraft take) and how far into it the effect starts (frames at 24 fps),
+ *  so his words "apps" (t 3 to 13), "pay" (t 19 to 27) and "hundreds" (t 27 to 37) land in the visible window. */
+const CLIP = "a_pay" as const;
+const OFFSET = 10;
+/** His take scales about (540, 1840) from 1.07 down to 1.033 (CLIP_S). His chin's lowest point over the part of a_pay
+ *  that plays (0.42 to 2.42 s, measured every 0.25 s) is y 975 (mouth open on "apps"; 985 with margin), so on screen it
+ *  is lowest at the smallest scale. His words sit at least CHIN_CLEAR under it, the tube's top edge under his words. */
 const CLIP_S = [1.07, 1.068, 1.035, 1.033];
 const CLIP_ORIGIN = { x: 540, y: 1840 };
-const CHIN_TAKE = 1090;
+const CHIN_TAKE = 985;
 const CHIN_CLEAR = 40;
 const CHIN_SCREEN = CLIP_ORIGIN.y + (CHIN_TAKE - CLIP_ORIGIN.y) * Math.min(...CLIP_S);
 const CAPTION_SIZE = 60;
@@ -98,10 +105,23 @@ const SOURCE = 26;
 const TARGETS = COUNTS.map((c) => `${c.n}${c.plus ? "+" : ""}`);
 const MGAP = 6;
 const BPAD = 7;
-/** Widest line of each label in em of Inter 600 ("new scripting", "new Krokodove", "and controls"), measured on the
- *  27 px stills (177, 201 and 158 px), plus 4 percent. Each label is centered under its board. */
-const LABEL_EM = [6.56, 7.44, 5.85].map((e) => e * 1.04);
-const labelW = (d: number) => LABEL_EM[d] * LABEL;
+/** Two lines, broken at the space nearest the middle (labels are verbatim from facts.ts). */
+const twoLines = (s: string): [string, string] => {
+  const mid = s.length / 2;
+  let best = -1;
+  for (let i = 0; i < s.length; i++) if (s[i] === " " && (best < 0 || Math.abs(i - mid) < Math.abs(best - mid))) best = i;
+  return best < 0 ? [s, ""] : [s.slice(0, best), s.slice(best + 1)];
+};
+/** Approximate advance widths of Inter (em), padded 6 percent for the 600 weight: a conservative width for a label line
+ *  (checked against the 27 px stills of the set 1 labels: within 3 percent, never under). */
+const EM: Record<string, number> = {
+  a: 0.56, b: 0.6, c: 0.54, d: 0.6, e: 0.56, f: 0.36, g: 0.6, h: 0.58, i: 0.25, j: 0.26, k: 0.53, l: 0.25, m: 0.88,
+  n: 0.58, o: 0.58, p: 0.6, q: 0.6, r: 0.38, s: 0.51, t: 0.36, u: 0.58, v: 0.54, w: 0.79, x: 0.53, y: 0.54, z: 0.51, " ": 0.28,
+};
+const textEm = (s: string) =>
+  1.06 * s.split("").reduce((a, ch) => a + (EM[ch] ?? (/[A-Z]/.test(ch) ? 0.68 : /[0-9]/.test(ch) ? 0.62 : 0.34)), 0);
+/** Width of label d (its widest line) at the label size. Each label is centered under its board. */
+const labelW = (d: number) => Math.max(...twoLines(COUNTS[d].label).map(textEm)) * LABEL;
 /** Clear space between neighbouring labels, and the smallest gap between boards. */
 const LABEL_GAP = 34;
 const GAP_MIN = 48;
@@ -142,17 +162,18 @@ const BOARD_Y = TITLE_Y + TITLE + SPARE * 1.3;
 const TY = BOARD_Y + BOARD_H + Math.min(22, SPARE * 0.8);
 const LABEL_Y = TY + Math.min(20, SPARE * 0.7);
 const SOURCE_Y = CARD_H - 20 - SPARE * 0.4 - SOURCE * 1.2;
-/** Fusion page press shot (3840 x 2160), far back: its viewer and time ruler (the bright part of the page). */
-const SHOT_W = 3840;
-const SHOT_H = 2160;
+/** SHOTS.fusion, far back (set 3: the FilmCraft timeline close-up, 2200 x 849, wide and short). */
+const SHOT_W = 2200;
+const SHOT_H = 849;
 
 // ---------------------------------------------------------------- the flip schedule (24 fps, t = 0 at the card resolve)
 /** The drums the modules turn through, in order: digits count up through 0..9, the "+" module lands after the 9.
  *  Every module starts blank. */
 const DIGITS = "0123456789";
 const PLUS = "0123456789+";
-/** Each board's last module lands at LAND[i] + (n - 1) * STEP; display 1 already flips when the card resolves. */
-const LAND = [6.6, 15.6, 22.4];
+/** Board i's first module lands at LAND[i], its last at LAND[i] + (n - 1) * STEP: on "apps" (last at t 9.2), "pay"
+ *  (22.2) and "hundreds" (26.8 to 30.4). Display 1 already flips when the card resolves. */
+const LAND = [8, 21, 26.8];
 const STEP = 1.2;
 const FLIPS = [5, 6, 7];
 type Mod = { seq: string[]; at: number[]; dur: number[] };
@@ -300,14 +321,6 @@ const Board: React.FC<{ d: number; t: number }> = ({ d, t }) => {
   );
 };
 
-/** Two lines, broken at the space nearest the middle (labels are verbatim from facts.ts). */
-const twoLines = (s: string): [string, string] => {
-  const mid = s.length / 2;
-  let best = -1;
-  for (let i = 0; i < s.length; i++) if (s[i] === " " && (best < 0 || Math.abs(i - mid) < Math.abs(best - mid))) best = i;
-  return best < 0 ? [s, ""] : [s.slice(0, best), s.slice(best + 1)];
-};
-
 /** What the tube shows: the press shot far back (parallax), then the content plane under the inner camera. */
 const Screen: React.FC<{ t: number; zi: number }> = ({ t, zi }) => {
   // inner camera: tight on display 1, easing to identity as the zoom returns to 1
@@ -316,16 +329,17 @@ const Screen: React.FC<{ t: number; zi: number }> = ({ t, zi }) => {
   const fy = lerp(BOARD_Y + BOARD_H / 2, CARD_H / 2, u);
   const tx = CARD_W / 2 - fx * zi;
   const ty = CARD_H / 2 - fy * zi;
-  // far plane: the Fusion viewer and ruler, pushed in, panning, moving less than the content (k = 0.35)
+  // far plane: the timeline's clips, pushed in, panning left to right, moving less than the content (k = 0.35). The shot
+  // is short (849 px), so its scale keeps it taller than the tube at every zoom; the pan stays inside its width.
   const pan = ez(t, -6, 52, EASE.inOut);
-  const shotS = 0.52 * Math.pow(zi, 0.35);
-  const sx = lerp(1640, 2160, pan) + (fx - CARD_W / 2) * 0.6;
-  const sy = lerp(640, 720, pan) + (fy - CARD_H / 2) * 0.6;
+  const shotS = Math.max(0.6, (CARD_H + 40) / SHOT_H) * Math.pow(zi, 0.35);
+  const sx = lerp(820, 1340, pan) + (fx - CARD_W / 2) * 0.6;
+  const sy = SHOT_H / 2 + (fy - CARD_H / 2) * 0.4;
   const title = ez(t, -3, 4, EASE.enter);
   const source = ez(t, 19, 26, EASE.enter);
   return (
     <AbsoluteFill style={{ background: PH.panel, overflow: "hidden" }}>
-      <div style={{ position: "absolute", inset: 0, overflow: "hidden", filter: "blur(5px) brightness(0.72) contrast(0.92)" }}>
+      <div style={{ position: "absolute", inset: 0, overflow: "hidden", filter: "blur(5px) brightness(0.6) contrast(0.92)" }}>
         <Img
           src={staticFile(SHOTS.fusion)}
           style={{ position: "absolute", left: CARD_W / 2 - sx * shotS, top: CARD_H / 2 - sy * shotS, width: SHOT_W * shotS, height: SHOT_H * shotS, maxWidth: "none", display: "block" }}
@@ -339,7 +353,7 @@ const Screen: React.FC<{ t: number; zi: number }> = ({ t, zi }) => {
         }}
       />
       <div style={{ position: "absolute", left: 0, top: 0, width: CARD_W, height: CARD_H, transformOrigin: "0 0", transform: `translate(${tx.toFixed(2)}px, ${ty.toFixed(2)}px) scale(${zi.toFixed(4)})` }}>
-        {/* title row: the real Resolve mark and the version */}
+        {/* title row: the product mark and COUNTS_TITLE */}
         <div style={{ position: "absolute", left: PAD_X, top: TITLE_Y, display: "flex", alignItems: "center", gap: 12, opacity: title, transform: `translateY(${((1 - title) * 10).toFixed(2)}px)` }}>
           <Img src={staticFile(LOGOS.resolve)} style={{ width: LOGO, height: LOGO, display: "block" }} />
           <div style={{ fontFamily: MONO, fontWeight: 700, fontSize: TITLE, lineHeight: 1, color: INK, whiteSpace: "nowrap" }}>{COUNTS_TITLE}</div>
@@ -417,9 +431,9 @@ export const SplitFlap: React.FC<FxProps> = ({ t }) => {
   return (
     <AbsoluteFill style={{ background: "#000", overflow: "hidden" }}>
       <AbsoluteFill style={{ transform: `translate(${dx.toFixed(2)}px, ${dy.toFixed(2)}px) scale(${clipS.toFixed(4)})`, transformOrigin: `${CLIP_ORIGIN.x}px ${CLIP_ORIGIN.y}px`, filter: clipFilter }}>
-        <Clip name="surface" />
+        <Clip name={CLIP} offset={OFFSET} />
       </AbsoluteFill>
-      <Caption name="surface" t={t} y={CAPTION_Y} size={CAPTION_SIZE} maxWidth={SAFE_IG.w - 40} style={{ left: SAFE_IG.x0, right: 1080 - SAFE_IG.x1 }} />
+      <Caption name={CLIP} t={t} offset={OFFSET} y={CAPTION_Y} size={CAPTION_SIZE} maxWidth={SAFE_IG.w - 40} style={{ left: SAFE_IG.x0, right: 1080 - SAFE_IG.x1 }} />
       <div
         style={{
           position: "absolute",
@@ -451,7 +465,7 @@ export const splitflap: FxDef = {
   id: "splitflap",
   command: "/split-flap",
   menu: "Flip-board digits land on real numbers",
-  clip: "surface",
+  clip: CLIP,
   Comp: SplitFlap,
-  thumbT: [28, 34, 42],
+  thumbT: [32, 38, 44],
 };

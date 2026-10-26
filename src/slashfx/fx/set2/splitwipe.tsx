@@ -1,13 +1,15 @@
-// /split-wipe (set 2, Victor 2026-10-26): Victor's clip "plate" full frame twice, in perfect register (one camera
-// transform shared by both copies): the copy left of the line is flat (saturate 0.2, contrast 0.9), the copy right of it
-// is as shot. The boundary is the live scope trace drawn vertically: the clip-path of the flat copy follows the trace's
-// own points, so the wave IS the edge. The line wipes edge to edge and back on his beats (EASE.travel, never a jump):
-// in from the right as the card resolves, out to the right on "there to take", back to the left on "off your plate", so
-// he ends in full color. His voice is the green wave on the line at mouth height; on each wipe Claude's coral packet
-// rides down the line from the label pane.
-// A small CRT label pane above his head types the verbatim job names from the Black Hat Editor Tools paragraph
-// (ARTICLES, source "Black Hat Editor Tools": "Named jobs. Analyze projects, organize media, adjust settings, batch render.") in coral mono, one per
-// wipe: the old name lifts away, the new one types out with a coral caret.
+// /split-wipe (set 2 on the Remotion take, Victor 2026-10-26): Victor's clip "r_assets" ("Screenshots, demos of your
+// product, and reference videos of style that you like.") full frame twice, in perfect register (one camera transform
+// shared by both copies): the copy left of the line is flat (saturate 0.2, contrast 0.9), the copy right of it is as
+// shot. The boundary is the live scope trace drawn vertically: the clip-path of the flat copy follows the trace's own
+// points, so the wave IS the edge. The line wipes edge to edge and back on his beats (EASE.travel, never a jump): in
+// from the right on "Screenshots", out to the right on "demos", back to the left on "your product," so he ends in full
+// color ("reference" comes at t 48.6, after the reel has scrolled the effect away). His voice is the green wave on the
+// line at mouth height; on each wipe Claude's coral packet rides down the line from the label pane.
+// A small CRT label pane above his head, with the Remotion mark (LOGOS.resolve), types three verbatim items from the
+// Remotion docs paragraph (facts_remotion.ts ARTICLES, source "Remotion docs": "... Use this for knowledge about
+// compositions, animations, layout, typography, media elements, effects, audio, fonts, timing.") in coral mono under the
+// verbatim heading "Use this for knowledge about", one per wipe: the old item lifts away, the new one types out.
 // Camera: one push 1.008 to 1.034 anchored on his face (hold, travel, hold) with a 2.4 px drift; the pane rides the drift
 // a little more (nearer, parallax) and settles from a 7 degree tilt. Footage is the background; nothing far behind it.
 // Safe zone: the pane, the line's rest positions (with the wave) and the caption stay inside SAFE_IG at every t; the
@@ -16,7 +18,7 @@ import React from "react";
 import { AbsoluteFill, Img, interpolate, staticFile } from "remotion";
 import { CRT } from "../../../artcraft/kit/Tube";
 import { PH } from "../../../artcraft/theme";
-import { ARTICLES, LOGOS } from "../../data/facts";
+import { ARTICLES, JOBS, LOGOS } from "../../data/facts";
 import { Caption, Clip, MONO } from "../../kit";
 import { CLAMP, EASE, H, SAFE_IG, UI, W, ez, lerp, type FxDef, type FxProps } from "../../theme";
 import { traceY, voiceEnv } from "../shutterstrike";
@@ -25,26 +27,29 @@ import type { ScopeBump } from "../../../artcraft/kit/Scope";
 // ---------------------------------------------------------------- real text (verbatim, checked against facts.ts)
 /** The paragraph is found by its source name, not its index, and only when the effect renders: if facts.ts ever loses it
  *  (or the words), the error names the source, and the other sets' renders (which import set 2) are not affected. */
-const SOURCE_NAME = "Black Hat Editor Tools";
+const SOURCE_NAME = "Remotion docs";
+/** one item per wipe, matched to his words: screenshots are media elements, demos are animations, style is effects */
+const PANE_JOBS = ["media elements", "animations", "effects"] as const;
 let realText: { head: string; jobs: string[] } | null = null;
 const textOf = () => {
   if (realText) return realText;
   const article = ARTICLES.find((a) => a.source === SOURCE_NAME);
   if (!article) throw new Error(`splitwipe: no article from "${SOURCE_NAME}" in facts.ts ARTICLES`);
-  const pick = (s: string) => {
+  const pick = (s: string, job = false) => {
     if (!article.text.includes(s)) throw new Error(`splitwipe: "${s}" is not in the ${SOURCE_NAME} paragraph (facts.ts ARTICLES)`);
+    if (job && !(JOBS as readonly string[]).includes(s)) throw new Error(`splitwipe: "${s}" is not in facts.ts JOBS (${SOURCE_NAME})`);
     return s;
   };
-  realText = { head: pick("Named jobs."), jobs: [pick("organize media"), pick("adjust settings"), pick("batch render")] };
+  realText = { head: pick("Use this for knowledge about"), jobs: PANE_JOBS.map((j) => pick(j, true)) };
   return realText;
 };
 
 // ---------------------------------------------------------------- camera (both copies share it: perfect register)
-/** his face center in the clip: the push grows him in place */
-const ORIGIN = { x: 665, y: 860 };
+/** his face center in the clip (head x 390..790, y 535..1030 at rest): the push grows him in place */
+const ORIGIN = { x: 590, y: 820 };
 const camAt = (t: number) => ({
   z: interpolate(t, [0, 8, 30, 48], [1.008, 1.01, 1.032, 1.034], { ...CLAMP, easing: EASE.travel }),
-  // at z 1.008 the footage overscans 3.3 px or more on every side, so the drift never shows an edge
+  // at z 1.008 the footage overscans 3.9 px or more on every side, so the drift never shows an edge
   dx: 2.4 * Math.sin(t * 0.08 + 0.3),
   dy: 2 * Math.sin(t * 0.06 + 1.1),
 });
@@ -52,14 +57,14 @@ const camAt = (t: number) => ({
 const NEAR = 1.35;
 
 // ---------------------------------------------------------------- the wipe line
-/** rest positions: beside his face (head about x 430..900 at the full push), inside the safe rect with the wave */
+/** rest positions: beside his face (head about x 383..797 at the full push), inside the safe rect with the wave */
 const XL = 160;
 const XR = 930;
-/** the wipes, on his beats: in from the right as the card resolves, "there to take" (t 13 to 25), "off your plate" (30 to 42) */
+/** the wipes, on his beats: "Screenshots," (t 3.6, inside the card), "demos" (t 13.8), "your product," (t 31.3 to 45.7) */
 const WIPES = [
-  { a: -6, b: 8, to: XL },
-  { a: 13, b: 25, to: XR },
-  { a: 30, b: 42, to: XL },
+  { a: -6, b: 6, to: XL },
+  { a: 12, b: 23, to: XR },
+  { a: 27, b: 38, to: XL },
 ] as const;
 const lineX = (t: number) => {
   let x = XR;
@@ -70,8 +75,8 @@ const lineX = (t: number) => {
   }
   return x + 3 * Math.sin(t * 0.11 + 0.6);
 };
-/** his mouth on screen (clip y 914 under the push) and where the coral packet runs on the line */
-const Y_MOUTH = 916;
+/** his mouth on screen (clip y about 940 under the push) and where the coral packet runs on the line */
+const Y_MOUTH = 942;
 const Y_TOP = 430;
 const Y_BOT = 1440;
 const HUM = 1.6;
@@ -79,7 +84,7 @@ const HUM = 1.6;
 const CAPTION_BOTTOM = 1450;
 
 const bumpsAt = (t: number): ScopeBump[] => {
-  const voice = voiceEnv("plate", t) * (14 + 4 * Math.sin(t * 0.61) + 2 * Math.sin(t * 1.37));
+  const voice = voiceEnv("r_assets", t) * (14 + 4 * Math.sin(t * 0.61) + 2 * Math.sin(t * 1.37));
   const bumps: ScopeBump[] = [{ x: Y_MOUTH, amp: voice, sigma: 34, rgb: PH.userRgb }];
   for (const w of WIPES) {
     const env = interpolate(t, [w.a - 1, w.a + 2, w.b - 2, w.b + 1], [0, 1, 1, 0], CLAMP);
@@ -167,7 +172,7 @@ const Pane: React.FC<{ t: number }> = ({ t }) => {
         }}
       >
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(28,31,38,0.9) 0%, rgba(16,18,23,1) 100%)" }} />
-        <Img src={staticFile(LOGOS.resolve)} style={{ position: "absolute", left: 26, top: (P_H - ICON) / 2, width: ICON, height: ICON, display: "block" }} />
+        <Img src={staticFile(LOGOS.resolve)} style={{ position: "absolute", left: 26, top: (P_H - ICON) / 2, width: ICON, height: ICON, objectFit: "contain", display: "block" }} />
         <div style={{ position: "absolute", left: TEXT_X, top: 22, fontFamily: MONO, fontWeight: 500, fontSize: 28, lineHeight: 1, color: INK, opacity: 0.66 * head, whiteSpace: "nowrap", transform: `translateY(${(1 - head) * 8}px)` }}>
           {textOf().head}
         </div>
@@ -205,12 +210,12 @@ export const SplitWipe: React.FC<FxProps> = ({ t }) => {
     <AbsoluteFill style={{ background: "#000", overflow: "hidden" }}>
       {/* as shot */}
       <div style={camStyle}>
-        <Clip name="plate" />
+        <Clip name="r_assets" />
       </div>
       {/* flat: the same clip, the same transform, only the filter differs; clipped to the left of the live line */}
       <div style={{ position: "absolute", inset: 0, clipPath: clip, WebkitClipPath: clip }}>
         <div style={{ ...camStyle, filter: "saturate(0.2) contrast(0.9)" }}>
-          <Clip name="plate" />
+          <Clip name="r_assets" />
         </div>
       </div>
       <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 58% 42%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.22) 100%)" }} />
@@ -238,8 +243,9 @@ export const SplitWipe: React.FC<FxProps> = ({ t }) => {
           </CRT>
         </div>
       </div>
-      {/* anchored by its bottom edge at y 1450: clear of the Reels UI band, on his chest under his chin, inside the rect */}
-      <Caption name="plate" t={t} size={60} chunk={3} maxWidth={SAFE_IG.w - 40} style={{ top: undefined, bottom: H - CAPTION_BOTTOM }} />
+      {/* anchored by its bottom edge at y 1450: clear of the Reels UI band, on his chest under his chin, inside the rect. Five
+          words do not fit one line at 60 px, so the two lines are balanced (no single word left hanging) and grow upward. */}
+      <Caption name="r_assets" t={t} size={60} chunk={5} maxWidth={SAFE_IG.w - 40} style={{ top: undefined, bottom: H - CAPTION_BOTTOM, textWrap: "balance" }} />
     </AbsoluteFill>
   );
 };
@@ -248,7 +254,7 @@ export const splitwipe: FxDef = {
   id: "splitwipe",
   command: "/split-wipe",
   menu: "A wipe line that grades your footage",
-  clip: "plate",
+  clip: "r_assets",
   Comp: SplitWipe,
-  thumbT: [18, 28, 38],
+  thumbT: [16, 26, 34],
 };

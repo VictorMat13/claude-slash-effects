@@ -1,10 +1,13 @@
-// /word-scope (set 2): his footage full frame. One live scope trace runs under his chin, turns the corner at the left and
-// climbs beside his head. Every word he says leaves his mouth as a green wave packet on the line under his chin, runs
-// left, rounds the corner and climbs to its landing point, where it resolves into the typed word (phosphor mono with a
-// slight RGB split, a coral block caret typing it) on a see-through CRT pane that grows row by row beside him. The words
-// ARE the caption: his sentence builds word by word in that column. Claude answers each landing with a small coral swell.
+// /word-scope (set 2, Remotion take r_prompts: "Give it a specific prompt, like, track this object as it moves."): his
+// footage full frame. One live scope trace runs under his chin, turns the corner at the left and climbs beside his head.
+// Every word he says leaves his mouth as a green wave packet on the line under his chin, runs left, rounds the corner and
+// climbs to its landing point, where it resolves into the typed word (phosphor Inter 800 with a slight RGB split, a coral
+// block caret typing it) on a see-through CRT pane that grows row by row beside him: "Give it a specific prompt," one
+// word per row. The words ARE the caption. Claude answers each landing with a small coral swell.
 // 2.5D: the pane is angled toward his head (its inner edge recedes) and rides the camera drift more than the footage.
-// Camera: hold, one slow push 1.012 to 1.046 anchored on his head (never past 1.07), hold, with a sine drift throughout.
+// Camera: hold, one slow push 1.01 to 1.03 anchored on his head (never past 1.07), hold, with a sine drift throughout.
+// Clearance: in this take his hair's left edge is at x 350..400 (skin 383..430); the pane's visual right edge stays near
+// x 335, left of his hair at every t through the push and the drift.
 // Timing at 24 fps: inside the result card t 0 to 9, push to full screen 9 to 14, full screen 14 to 30, alive to 48.
 // IG safe zone: the pane, the words, the caret and every packet stay inside SAFE_IG (x 60..1000, y 270..1580) at every t,
 // including the push, the drift and its parallax. The trace line itself bleeds off the right and top edges.
@@ -13,28 +16,28 @@ import React from "react";
 import { AbsoluteFill, Easing, interpolate } from "remotion";
 import { PH } from "../../../artcraft/theme";
 import { CLIPS } from "../../data/clips";
-import { Clip, MONO } from "../../kit";
+import { Clip, INTER } from "../../kit";
 import { CLAMP, EASE, FPS, H, UI, W, ez, lerp, type FxDef, type FxProps } from "../../theme";
 import { voiceEnv } from "../shutterstrike";
 
-const CLIP = "intimidating" as const;
-/** The clip starts this many frames into the take, so he is already saying "And for the" on the first frame, the first
- *  word lands inside the card and the next ones during the push to full screen. */
-const OFFSET = 16;
+const CLIP = "r_prompts" as const;
+/** The clip starts this many frames into the take: "Give" is already in flight on the first frame, and the five words
+ *  land t 11 to 29, through the push and the full-screen hold. "like," would land at t 42, after the hold. */
+const OFFSET = 6;
 
 // ---- camera (footage) and the overlay's parallax
-const ORIGIN = { x: 690, y: 780 };
+const ORIGIN = { x: 597, y: 760 };
 const KEY_T = [0, 10, 30, 48];
-const ZOOM = [1.012, 1.012, 1.042, 1.046];
+const ZOOM = [1.01, 1.01, 1.028, 1.03];
 const CAM_EASE = Easing.inOut(Easing.cubic);
 const DRIFT = { x: 5, y: 3 };
-/** The overlay (trace, pane, words) sits nearer the lens: it rides the drift 1.25x and takes 40% of the push. */
+/** The overlay (trace, pane, words) sits nearer the lens: it rides the drift 1.25x. It takes none of the push, so the
+ *  climb and its packets keep their place inside the safe left edge. */
 const NEAR = 1.25;
-const OVER_PUSH = 0.4;
 
 // ---- the trace: from off the right edge, left under his chin, round the corner, up beside his head and off the top
-const TX = 142;
-const TY = 1166;
+const TX = 84;
+const TY = 1150;
 const R = 90;
 const TOP = -60;
 const RIGHT = W + 60;
@@ -81,18 +84,18 @@ const pathAt = (at: number) => {
 const S_UP = PATH.L - (TY - R - TOP);
 const sAtY = (y: number) => S_UP + (TY - R - y);
 /** His voice: on the line right under his mouth. */
-const VOICE_X = 660;
+const VOICE_X = 597;
 const S_VOICE = RIGHT - VOICE_X;
 
 // ---- the pane and its rows (overlay px)
 const FONT = 56;
-const CHAR_W = FONT * 0.6; // JetBrains Mono advance
-const PANE = { left: 162, top: 324, pad: 16, w: 334 } as const;
+const CARET_W = 15;
+/** Narrow enough for his head: the widest words ("specific", "prompt,") are about 212 px in Inter 800 at 56 px. */
+const PANE = { left: 98, top: 330, pad: 14, w: 252 } as const;
 const ROW_H = 66;
-const PITCH = 94;
-/** The words of the take the column builds: "And for the video editors watching this," (the rest of the line is said
- *  after the effect has scrolled away, so the column ends on "this," and the ending grid's thumbs read whole). */
-const ROWS = 7;
+const PITCH = 104;
+/** The words that land by t 41: "Give it a specific prompt," (one row each). */
+const ROWS = 5;
 const rowTop = (i: number) => PANE.top + PANE.pad + i * PITCH;
 const rowMid = (i: number) => rowTop(i) + ROW_H / 2;
 
@@ -218,8 +221,6 @@ const Row: React.FC<{ p: WordPlan; i: number; t: number; dim: number; nextAt: nu
   if (t < start) return null;
   const chars = p.w.split("");
   const per = 0.75;
-  const typed = (t - start) / per;
-  const caretX = Math.min(chars.length, Math.max(0, typed)) * CHAR_W;
   // The caret appears with the landing, types the word, then breathes until the next word starts typing, then fades.
   const caretIn = ez(t, start, start + 2, EASE.enter);
   // One caret at a time: the old one is gone by the time the next word's first glyph is half in.
@@ -238,7 +239,7 @@ const Row: React.FC<{ p: WordPlan; i: number; t: number; dim: number; nextAt: nu
         opacity: 1 - 0.08 * dim,
       }}
     >
-      <div style={{ position: "relative", height: FONT, fontFamily: MONO, fontWeight: 700, fontSize: FONT, lineHeight: `${FONT}px`, whiteSpace: "pre" }}>
+      <div style={{ display: "flex", alignItems: "center", height: FONT, fontFamily: INTER, fontWeight: 800, fontSize: FONT, lineHeight: `${FONT}px`, letterSpacing: -1.5, whiteSpace: "pre" }}>
         {chars.map((ch, j) => {
           const a = start + j * per;
           const c = ez(t, a, a + 2.5, EASE.enter);
@@ -247,9 +248,7 @@ const Row: React.FC<{ p: WordPlan; i: number; t: number; dim: number; nextAt: nu
             <span
               key={j}
               style={{
-                position: "absolute",
-                left: j * CHAR_W,
-                top: 0,
+                display: "inline-block",
                 color: UI.screenInk,
                 opacity: c,
                 // Phosphor type: the slight RGB split of the tube, hard offsets (no glow), widest as the glyph strikes.
@@ -262,17 +261,7 @@ const Row: React.FC<{ p: WordPlan; i: number; t: number; dim: number; nextAt: nu
           );
         })}
         {caretOp > 0.01 ? (
-          <div
-            style={{
-              position: "absolute",
-              left: caretX + 4,
-              top: 6,
-              width: CHAR_W * 0.62,
-              height: FONT - 10,
-              background: UI.coral,
-              opacity: caretOp,
-            }}
-          />
+          <div style={{ width: CARET_W, height: FONT - 12, marginLeft: 4, background: UI.coral, opacity: caretOp }} />
         ) : null}
       </div>
     </div>
@@ -298,7 +287,7 @@ const Pane: React.FC<{ t: number }> = ({ t }) => {
         opacity: appear,
         transform: `perspective(1500px) rotateY(13deg) translateY(${((1 - appear) * -10).toFixed(2)}px)`,
         // A fixed origin (not 50% of the growing height), so rows that already landed never shear as the pane grows.
-        transformOrigin: "0px 378px",
+        transformOrigin: "0px 255px",
       }}
     >
       <div
@@ -346,7 +335,6 @@ export const WordScope: React.FC<FxProps> = ({ t }) => {
   const z = interpolate(t, KEY_T, ZOOM, { ...CLAMP, easing: CAM_EASE });
   const dx = DRIFT.x * Math.sin(t * 0.085 + 0.4);
   const dy = DRIFT.y * Math.sin(t * 0.065 + 1.3);
-  const oz = 1 + (z - 1) * OVER_PUSH;
   const bumps = bumpsAt(t);
   return (
     <AbsoluteFill style={{ background: UI.bg, overflow: "hidden" }}>
@@ -374,8 +362,7 @@ export const WordScope: React.FC<FxProps> = ({ t }) => {
         style={{
           position: "absolute",
           inset: 0,
-          transform: `translate(${(dx * NEAR).toFixed(2)}px, ${(dy * NEAR).toFixed(2)}px) scale(${oz.toFixed(5)})`,
-          transformOrigin: `${ORIGIN.x}px ${ORIGIN.y}px`,
+          transform: `translate(${(dx * NEAR).toFixed(2)}px, ${(dy * NEAR).toFixed(2)}px)`,
         }}
       >
         <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
@@ -392,7 +379,7 @@ export const wordscope: FxDef = {
   id: "wordscope",
   command: "/word-scope",
   menu: "Your words arrive as waves on the line",
-  clip: "intimidating",
+  clip: "r_prompts",
   Comp: WordScope,
   thumbT: [16, 28, 40],
 };

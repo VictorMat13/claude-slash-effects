@@ -7,4 +7,4 @@ import { splitflap } from "./splitflap";
 import { windowslide } from "./windowslide";
 import { railwords } from "./railwords";
 
-export const SET3: FxDef[] = [headlinefeed, pixelportrait, terminalquote, splitflap, windowslide, railwords];
+export const SET3: FxDef[] = [headlinefeed, windowslide, terminalquote, splitflap, railwords, pixelportrait];

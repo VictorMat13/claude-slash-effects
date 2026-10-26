@@ -1,14 +1,15 @@
 // /beat-track (set 4): split frame. Above, a CRT screen in 2.5D: far back the real Media page press shot (SHOTS.media,
 // pushed in on the media pool, blurred by distance, slow eased pan), then the grid, then one audio track: the real Resolve
 // track name A1 (TRACK_NAMES) on its header, a ruler, and Victor's take drawn as a waveform of bars built from his real word
-// timings (voiceEnv of the clip "highlight"). The track scrolls right to left past a fixed coral playhead with a Resolve
+// timings (voiceEnv of the clip "hours", Video 4 A-roll). The track scrolls right to left past a fixed coral playhead with a Resolve
 // timecode over it; the bars he has already said turn green as they cross the playhead. On every word a coral marker
 // drops onto the track at the playhead (the pin lands, its stem rises, the word in mono lands above it in a small dark
 // chip, staggered) and then rides the track out to the left. The live scope trace is the track's baseline: his voice is
 // the green swell at the playhead, each marker lands with a coral swell that rides away with it. His words sit under the
 // trace in coral mono, three at a time.
 // One camera: tight on the playhead (1.3), pull out to the whole track (1.0) across the push to full screen, hold, drift.
-// Below, his footage, his whole head inside the lower half of the safe rect.
+// Below, his footage (scale 0.94, the same take blurred behind to fill the sides), his whole head inside the lower half
+// of the safe rect (head at rest x 355..830, y 500..1100 in the clip, from clips.ts).
 // IG safe zone: the timecode, ruler content, chips, markers, header and words stay inside SAFE_IG (x 60..1000, y 270..930
 // above the split) at every t: the tight framing keeps them in, the markers fade out before they reach the header, and
 // the header only comes in once the camera has pulled out. The lane, the bars, the grid, the plate and the trace bleed.
@@ -23,7 +24,9 @@ import { CRT, Clip, DarkGrid, MONO } from "../../kit";
 import { CLAMP, EASE, FPS, H, UI, W, ez, lerp, type FxDef, type FxProps } from "../../theme";
 import { TRACE_INK, camAt, voiceEnv, type Cam, type CamKeys } from "../shutterstrike";
 
-const CLIP = "highlight" as const;
+const CLIP = "hours" as const;
+/** The take starts a quarter second in, so "These" is already landing on the first frame and "before." lands by t 40. */
+const OFFSET = Math.round(0.25 * FPS);
 /** The screen above, the footage below. The split sits just under the middle of the safe rect (925). */
 const SPLIT = 930;
 const CX = W / 2;
@@ -72,38 +75,74 @@ const layerStyle = (cam: Cam, k: number): React.CSSProperties => {
 };
 
 /** Clip time (seconds) under the playhead at frame t. */
-const nowAt = (t: number) => t / FPS;
+const nowAt = (t: number) => (t + OFFSET) / FPS;
 
-// ---- his words: one marker per word. The chips sit on two rows, laid out once from his word timings (the markers keep
-// fixed spacing on the scrolling track): a word goes on the lower row only if its chip fits there without sitting above
-// another word's pin and without touching the previous lower chip; otherwise it goes on the upper row (its stem passes
-// the lower row in a clear gap). The chip may slide sideways along its own stem, never off it, so every pin reads as
-// its own word's.
+// ---- his words: one marker per word, its chip on one of two rows. The markers keep fixed spacing on the scrolling track,
+// so the layout is planned once from his word timings: every row assignment is tried, and the one kept is the feasible
+// layout whose chips sit closest to left-anchored on their own stems (a small cost per upper-row chip prefers short stems).
+//  - a chip always contains its own stem, at least STEM_IN inside its edge, so every pin reads as its own word's;
+//  - a lower-row chip keeps PIN_CLEAR off every other marker's stem and pin (upper stems pass the lower row in clear gaps);
+//  - chips on one row never touch (CHIP_GAP).
 const CHAR_W = WORD_FONT * 0.6 - 0.4; // JetBrains Mono advance (0.6 em) minus the chip's tracking
 const CHIP_PAD = 9;
-/** The stem meets its chip at least this far inside the chip's edge. */
 const STEM_IN = 10;
-/** A lower-row chip keeps this far clear of every other marker's stem and pin. */
 const PIN_CLEAR = 12;
-/** Gap between neighbouring chips on the lower row. */
 const CHIP_GAP = 10;
-const WORDS = (() => {
-  const raw = CLIPS[CLIP].words.map((w) => ({ w: w.w, s: w.s, u: w.s * PPS, cw: w.w.length * CHAR_W + 2 * CHIP_PAD, drop: w.s * FPS }));
-  let lowR = -Infinity;
-  return raw.map((r, j) => {
-    const prev = j > 0 ? raw[j - 1].u : -Infinity;
-    const next = j < raw.length - 1 ? raw[j + 1].u : Infinity;
-    // lower row: the chip's left edge, as close to left-anchored on its stem as the neighbours allow
-    const lo = Math.max(prev + PIN_CLEAR, lowR + CHIP_GAP, r.u + STEM_IN - r.cw);
-    const hi = Math.min(r.u - STEM_IN, next - PIN_CLEAR - r.cw);
-    if (lo <= hi) {
-      lowR = hi + r.cw;
-      return { ...r, row: 1, dl: hi - r.u };
+type Raw = { w: string; s: number; u: number; cw: number; drop: number };
+type Marker = Raw & { row: number; dl: number };
+const planChips = (raw: Raw[]): Marker[] => {
+  const n = raw.length;
+  const pref = raw.map((r) => r.u - STEM_IN);
+  /** Allowed left edges of chip j on a row (0 upper, 1 lower). */
+  const range = (j: number, row: number): [number, number] => {
+    const r = raw[j];
+    let a = r.u + STEM_IN - r.cw;
+    let b = r.u - STEM_IN;
+    if (row === 1) {
+      if (j > 0) a = Math.max(a, raw[j - 1].u + PIN_CLEAR);
+      if (j < n - 1) b = Math.min(b, raw[j + 1].u - PIN_CLEAR - r.cw);
     }
-    // upper row: left-anchored on its own stem (upper neighbours are always two or more words apart, so they clear)
-    return { ...r, row: 0, dl: -STEM_IN };
-  });
-})();
+    return [a, b];
+  };
+  /** One row: earliest feasible left edges going forward, then each pulled back toward its left-anchored spot. */
+  const placeRow = (idx: number[], row: number): number[] | null => {
+    const E: number[] = [];
+    for (let k = 0; k < idx.length; k++) {
+      const [a, b] = range(idx[k], row);
+      const e = k === 0 ? a : Math.max(a, E[k - 1] + raw[idx[k - 1]].cw + CHIP_GAP);
+      if (e > b + 1e-6) return null;
+      E.push(e);
+    }
+    const L: number[] = new Array(idx.length).fill(0);
+    for (let k = idx.length - 1; k >= 0; k--) {
+      const b = range(idx[k], row)[1];
+      const hi = k === idx.length - 1 ? b : Math.min(b, L[k + 1] - raw[idx[k]].cw - CHIP_GAP);
+      L[k] = Math.max(E[k], Math.min(hi, pref[idx[k]]));
+    }
+    return L;
+  };
+  let best: { cost: number; row: number[]; L: number[] } | null = null;
+  for (let mask = 0; mask < 1 << n; mask++) {
+    const row = raw.map((_, j) => ((mask >> j) & 1 ? 0 : 1));
+    const up = row.flatMap((r, j) => (r === 0 ? [j] : []));
+    const lo = row.flatMap((r, j) => (r === 1 ? [j] : []));
+    const Lu = placeRow(up, 0);
+    const Ll = placeRow(lo, 1);
+    if (!Lu || !Ll) continue;
+    const L: number[] = new Array(n).fill(0);
+    up.forEach((j, k) => (L[j] = Lu[k]));
+    lo.forEach((j, k) => (L[j] = Ll[k]));
+    const cost = L.reduce((c, x, j) => c + Math.abs(x - pref[j]), 0) + 24 * up.length;
+    if (!best || cost < best.cost - 1e-6) best = { cost, row, L };
+  }
+  const b = best;
+  // No feasible plan (never for this take): alternate rows, left-anchored.
+  if (!b) return raw.map((r, j) => ({ ...r, row: j % 2, dl: -STEM_IN }));
+  return raw.map((r, j) => ({ ...r, row: b.row[j], dl: b.L[j] - r.u }));
+};
+const WORDS = planChips(
+  CLIPS[CLIP].words.map((w) => ({ w: w.w, s: w.s, u: w.s * PPS, cw: w.w.length * CHAR_W + 2 * CHIP_PAD, drop: w.s * FPS - OFFSET })),
+);
 const markerX = (s: number, now: number) => PH_X + (s - now) * PPS;
 
 // ---- the waveform: bars every 9 px of track, each the voice envelope at its own time, textured, from the baseline up
@@ -341,7 +380,7 @@ const Playhead: React.FC<{ now: number }> = ({ now }) => (
 
 /** The trace is the track's baseline: his voice at the playhead, a coral swell with each marker that rides away with it. */
 const bumpsAt = (t: number, now: number): ScopeBump[] => {
-  const b: ScopeBump[] = [{ x: PH_X, amp: 2 + voiceEnv(CLIP, t) * (14 + 5 * Math.sin(t * 0.61) + 3 * Math.sin(t * 1.37)), sigma: 22, rgb: PH.userRgb }];
+  const b: ScopeBump[] = [{ x: PH_X, amp: 2 + voiceEnv(CLIP, t + OFFSET) * (14 + 5 * Math.sin(t * 0.61) + 3 * Math.sin(t * 1.37)), sigma: 22, rgb: PH.userRgb }];
   for (const w of WORDS) {
     const a = interpolate(t, [w.drop, w.drop + 3, w.drop + 16], [0, 1, 0], { ...CLAMP, easing: EASE.decel });
     if (a > 0.01) b.push({ x: markerX(w.s, now), amp: 12 * a, sigma: 18, rgb: PH.claudeRgb });
@@ -377,16 +416,35 @@ const Words: React.FC<{ t: number; y: number }> = ({ t, y }) => {
   );
 };
 
-/** His take below the split, not stretched, never zoomed: scale 1.0 plus a slow eased push of 2.5 percent anchored on his
- *  face, moved up so his hair top sits about 22 px under the split and his chin about 1530 (safe bottom 1580). */
-const ORIGIN = { x: 560, y: 780 };
+/** His take below the split, not stretched, never zoomed past 1.07: scale 0.94 plus a slow eased push of 2 percent
+ *  anchored on his hair line, so his hair stays put and his chin grows down at most 11 px. Placed so his hair top (clip
+ *  y 500 at rest, 480 at its highest) sits at about y 950 (931 at worst) and his chin (1100, 1110 at worst) at about 1514
+ *  (1534 at worst with the push): inside 925..1580. Head x 355..830 lands on 322..769. Below 1.0 the clip no longer spans
+ *  the frame: the same take, enlarged, blurred and dimmed, fills the sides, and the sharp clip feathers into it. */
+const TAKE = { s: 0.94, push: 0.02, ox: 592, oy: 500, tx: -47, ty: -480 } as const;
+const FEATHER = "linear-gradient(to right, transparent 0px, #000 80px, #000 1000px, transparent 1080px)";
 const LowerTake: React.FC<{ t: number }> = ({ t }) => {
-  const s = 1 + 0.025 * ez(t, 0, 72, EASE.inOut);
+  const k = 1 + TAKE.push * ez(t, 0, 72, EASE.inOut);
+  const layer = (scale: number, style?: React.CSSProperties) => (
+    <div
+      style={{
+        position: "absolute",
+        left: 0,
+        top: 0,
+        width: W,
+        height: H,
+        transformOrigin: `${TAKE.ox}px ${TAKE.oy}px`,
+        transform: `translate(${TAKE.tx}px, ${TAKE.ty}px) scale(${scale.toFixed(5)})`,
+        ...style,
+      }}
+    >
+      <Clip name={CLIP} offset={OFFSET} />
+    </div>
+  );
   return (
     <div style={{ position: "absolute", left: 0, top: SPLIT, width: W, height: H - SPLIT, overflow: "hidden", background: UI.ink }}>
-      <div style={{ position: "absolute", left: 0, top: 0, width: W, height: H, transformOrigin: `${ORIGIN.x}px ${ORIGIN.y}px`, transform: `translate(0px, -468px) scale(${s.toFixed(5)})` }}>
-        <Clip name={CLIP} />
-      </div>
+      {layer(1.2 * k, { filter: "blur(28px) brightness(0.45) saturate(0.9)" })}
+      {layer(TAKE.s * k, { WebkitMaskImage: FEATHER, maskImage: FEATHER })}
     </div>
   );
 };
@@ -437,7 +495,7 @@ export const beattrack: FxDef = {
   id: "beattrack",
   command: "/beat-track",
   menu: "Your words drop onto the audio track",
-  clip: "highlight",
+  clip: "hours",
   Comp: BeatTrack,
-  thumbT: [26, 36, 46],
+  thumbT: [26, 33, 40],
 };

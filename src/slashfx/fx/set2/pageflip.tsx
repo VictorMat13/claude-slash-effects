@@ -1,35 +1,51 @@
-// /page-flip (set 2, builder S2-A). Victor full frame (clip "learn": "And if you want to learn how to use AI in Resolve,").
-// Beside his head, in the clear column left of his face, a CRT tube holds a 2.5D stack of manual pages. At the top of the
+// /page-flip (set 2, builder S2-A; retargeted 2026-10-26 to the Remotion take, dispatch/VIDEO2R.md). Victor full frame
+// (clip "r_skill": "And if you want consistent results, you have to make a skill for it.").
+// Beside his head, in the clear column left of his face, a CRT tube holds a 2.5D stack of document pages. At the top of the
 // tube a page counter (Inter 800, tabular numerals) spins from a low number to MANUAL.page while the pages flip faster and
 // faster: each flip is one sheet swinging down on its top edge (out toward the lens, then flat onto the stack, eased,
-// staggered, several in the air at once as it speeds up). MANUAL.name sits small under the counter, above the stack, from
-// the opening. Then the last page lands slower (its coral caret already waiting), MANUAL.section is typed on it and
-// MANUAL.source fades in smaller below the stack (all verbatim, facts.ts).
+// staggered, several in the air at once as it speeds up). Then the last page lands slower (its coral caret already
+// waiting) exactly on his word "skill" and the counter lands on MANUAL.page. Under the counter COUNTS[2].label ("pages of
+// docs", in as the camera pulls out) makes it read as an honest page count: Remotion's docs have no page numbers. The last
+// page carries MANUAL.name small at its head, MANUAL.section is typed under it, and MANUAL.source sits smaller below the
+// stack (all verbatim, facts.ts).
+// Timing: "skill" is 2.175 s into the clip, past the effect's window (the reel mounts it for t 0..41), so the clip starts
+// OFFSET frames in (inside "results,"; the caption reads "want consistent results," first) and "skill" lands at t 24.
+// From CLIP_END (t 38, after "it.") the footage holds its last frame.
 // One live scope trace runs under the stack; a coral packet fires on it at every landing and runs out toward him, the last
 // one bigger; his voice (real word timings) is the green amplitude at the end nearest him.
-// Camera: opens tight on the counter (the tube at 1.3x and the screen inside pushed in on the counter, his footage the far
-// plane, soft and dim), holds while the counter spins, then pulls out (t 6 to 22) to reveal him: the tube settles into its
-// column and angles toward him (2.5D), the screen inside pulls back, his footage racks into focus and eases 1.07 to 1.04
-// (never past 1.07). Ambient: tube float, footage drift, CRT refresh, trace carrier, caret.
+// Camera: opens tight on the counter (the screen inside the tube pushed in 1.5x on it, the tube frame at 1.04, his footage
+// the far plane, soft and dim), holds while the counter spins, then pulls out (t 6 to 22) to reveal him: the tube settles
+// and angles toward him (2.5D), the screen pulls back, his footage racks into focus and eases 1.07 to 1.04 (never past
+// 1.07). Ambient: tube float, footage drift, CRT refresh, trace carrier, caret.
 // Safe zone: the tube and everything in it, and the caption, stay inside SAFE_IG at every t; the tube never reaches his face
-// (its right edge stays left of his hair at every frame, including the tight opening). Caption: his words, on his chest.
+// (its right edge stays left of his ear at every frame, including the tight opening). Caption: his words, under his chin.
 import React from "react";
-import { AbsoluteFill, interpolate } from "remotion";
+import { AbsoluteFill, Sequence, interpolate } from "remotion";
 import { Scope, type ScopeBump } from "../../../artcraft/kit/Scope";
 import { PH } from "../../../artcraft/theme";
-import { MANUAL } from "../../data/facts";
+import { CLIPS } from "../../data/clips";
+import { COUNTS, MANUAL } from "../../data/facts";
 import { CRT, Caption, Clip, DarkGrid, INTER } from "../../kit";
-import { CLAMP, EASE, SAFE_IG, UI, ez, lerp, type FxDef, type FxProps } from "../../theme";
+import { CLAMP, EASE, FPS, SAFE_IG, UI, ez, lerp, type FxDef, type FxProps } from "../../theme";
 import { voiceEnv } from "../shutterstrike";
+
+// ---------------------------------------------------------------- the take
+const CLIP = "r_skill" as const;
+/** The last page lands on "skill", at t LAND_T (24 at 24 fps): the clip starts OFFSET frames in to put it there. */
+const LAND_T = 24;
+const SKILL = (CLIPS[CLIP].words.find((w) => w.w === "skill")?.s ?? 2.175) * FPS;
+const OFFSET = Math.round(SKILL - LAND_T);
+/** Last t the clip can play (2-frame margin); after it the footage holds that frame. */
+const CLIP_END = Math.floor(CLIPS[CLIP].dur * FPS) - OFFSET - 2;
 
 // ---------------------------------------------------------------- camera: one keyframe timeline (hold tight, pull out, hold)
 const KEY_T = [0, 6, 22, 48];
 const key = (t: number, v: number[]) => interpolate(t, KEY_T, v, { ...CLAMP, easing: EASE.travel });
 const camAt = (t: number) => ({
-  /** tube scale about its top-left corner (the safe rect's corner) */
-  s: key(t, [1.26, 1.25, 1.0, 0.99]),
-  /** the screen inside the tube, pushed in on the counter */
-  iz: key(t, [1.14, 1.13, 1.0, 1.0]),
+  /** tube scale about its top-left corner (the safe rect's corner); small, his ear is close at the opening */
+  s: key(t, [1.04, 1.039, 1.0, 0.99]),
+  /** the screen inside the tube, pushed in on the counter (it is 2 to 3 digits wide until the landing, so it fits) */
+  iz: key(t, [1.5, 1.48, 1.0, 1.0]),
   /** the tube turns toward him as he is revealed */
   ry: key(t, [2, 2.2, 7, 7.5]),
   rx: key(t, [3, 3, 1, 1]),
@@ -41,11 +57,12 @@ const camAt = (t: number) => ({
 const CLIP_ORIGIN = { x: 100, y: 760 };
 
 // ---------------------------------------------------------------- the tube (final framing, screen px) and its layout
-/** In this take his hair never comes further left than about x 405 (t 38..44); under the footage's 1.04 push about x 100
- *  that is about 417 on screen, so the tube ends at 400. Its left and top edges follow SAFE_IG (theme.ts). */
-const TUBE_RIGHT = 400;
+/** Over the part of r_skill this effect plays (1.17..2.75 s) his left ear comes no further left than x 356 (t 0), then
+ *  370..396; under the footage's push about x 100 that is 374 at t 0 and 385 after, so the tube ends at 336 (347 at the
+ *  1.04 opening). Its left and top edges follow SAFE_IG (theme.ts). */
+const TUBE_RIGHT = 336;
 /** top: 20 px under the safe top so the bezel clears the 4:5 feed crop (y 285) at the float's highest frame. */
-const TUBE = { left: SAFE_IG.x0 + 6, top: SAFE_IG.y0 + 20, w: TUBE_RIGHT - (SAFE_IG.x0 + 6), h: 716, r: 26 } as const;
+const TUBE = { left: SAFE_IG.x0 + 6, top: SAFE_IG.y0 + 20, w: TUBE_RIGHT - (SAFE_IG.x0 + 6), h: 636, r: 26 } as const;
 /** The CRT pass sizes itself to 1080 px: draw it at TUBE.w / K and scale it into the tube (finer scanlines, thin vignette). */
 const K = 0.4;
 const TUBE_IW = TUBE.w / K;
@@ -53,16 +70,16 @@ const TUBE_IH = TUBE.h / K;
 
 const INK = "#ECEAE4";
 const MUTED = "rgba(236,234,228,0.78)";
-const COUNTER = { y: 26, size: 84 } as const;
-/** 28 px (the label floor) with tight tracking: at the opening's 1.14 push every glyph stays clear of the bezel shadow. */
-const NAME = { y: 118, size: 28, track: -0.7 } as const;
+const COUNTER = { y: 24, size: 78 } as const;
+/** 28 px (the label floor), one line; it comes in as the screen pulls back, so it never meets the bezel. */
+const NAME = { y: 112, size: 28, track: -0.5 } as const;
 /** The stack: pages hang on their top edge at HINGE. */
-const PAGE = { x: 14, w: TUBE.w - 28, h: 330 } as const;
-const HINGE = 206;
+const PAGE = { x: 14, w: TUBE.w - 28, h: 290 } as const;
+const HINGE = 158;
 const SHEETS = 4;
 const SHEET_STEP = 7;
-const TRACE_Y = 600;
-const SOURCE = { y: 628, size: 28 } as const;
+const TRACE_Y = 512;
+const SOURCE = { y: 540, size: 28 } as const;
 /** The counter is the focal point of the screen's own push-in. */
 const FOCUS = { x: TUBE.w / 2, y: COUNTER.y + COUNTER.size / 2 };
 
@@ -71,8 +88,8 @@ const N = 16;
 /** Landing times get closer together: faster and faster. The first lands just before t 0, the 16th at t 20. */
 const landT = (k: number) => -6 + 26 * Math.pow(k / N, 0.55);
 const flipDur = (k: number) => lerp(7, 4.5, k / N);
-/** The last page: starts while the fast ones are still landing, lands slower, at t 24. */
-const FINAL = { start: 16.5, land: 24 } as const;
+/** The last page: starts while the fast ones are still landing, lands slower, on "skill". */
+const FINAL = { start: SKILL - OFFSET - 7.5, land: SKILL - OFFSET } as const;
 const FROM = 95; // degrees: just past edge-on, so a back never reaches up over the counter
 const FINAL_N = N + 1;
 type Flip = { k: number; start: number; land: number };
@@ -87,7 +104,7 @@ const FLIPS: Flip[] = [
 /** The counter: driven by the landings (continuous), accelerating; exactly MANUAL.page once the last page is down. */
 const TARGET = Number(MANUAL.page.replace(/,/g, ""));
 const counterAt = (t: number) => {
-  if (t >= FINAL.land) return MANUAL.page;
+  if (t >= FINAL.land) return TARGET.toLocaleString("en-US");
   let c = 0;
   for (const f of FLIPS) c += ez(t, f.land - 2, f.land, EASE.inOut);
   const v = Math.round(1 + (TARGET - 1) * Math.pow(c / FINAL_N, 2.1));
@@ -140,11 +157,16 @@ const PageBack: React.FC<{ shade: number }> = ({ shade }) => (
 
 /** The last page: a coral caret waiting while it falls, then MANUAL.section typed once it is down; body texture under it. */
 const FinalFace: React.FC<{ t: number }> = ({ t }) => {
-  const p = ez(t, 25, 35, EASE.inOut);
+  // "Agent Skills" types right after the landing, a few frames per word
+  const p = ez(t, FINAL.land + 1, FINAL.land + 7, EASE.inOut);
   const n = Math.round(MANUAL.section.length * p);
   const caretOn = p < 1 || Math.floor(t / 6) % 2 === 0;
   return (
-    <div style={{ position: "absolute", left: 14, right: 12, top: 16 }}>
+    <div style={{ position: "absolute", left: 14, right: 12, top: 12 }}>
+      {/* the document's own name, small, as the page's running head */}
+      <div style={{ fontFamily: INTER, fontWeight: 600, fontSize: 28, lineHeight: 1.14, letterSpacing: -0.5, color: MUTED, whiteSpace: "nowrap", marginBottom: 4 }}>
+        {MANUAL.name}
+      </div>
       <div
         style={{
           fontFamily: INTER,
@@ -157,13 +179,14 @@ const FinalFace: React.FC<{ t: number }> = ({ t }) => {
         }}
       >
         {MANUAL.section.slice(0, n)}
-        {caretOn ? (
-          <span style={{ display: "inline-block", width: 15, height: 32, marginLeft: 3, verticalAlign: -4, background: UI.coral }} />
-        ) : null}
+        {/* zero-width anchor: the caret never takes line space, so the heading never reflows while it types */}
+        <span style={{ display: "inline-block", width: 0, height: 0, position: "relative" }}>
+          {caretOn ? <span style={{ position: "absolute", left: 3, top: -28, width: 15, height: 32, background: UI.coral }} /> : null}
+        </span>
         <span style={{ opacity: 0 }}>{MANUAL.section.slice(n)}</span>
       </div>
       <div style={{ marginTop: 22 }}>
-        {bars(FINAL_N, 4).map((w, i) => (
+        {bars(FINAL_N, 6).map((w, i) => (
           <div key={i} style={{ width: `${(w * 100).toFixed(1)}%`, height: 8, borderRadius: 4, background: "rgba(236,234,228,0.3)", marginBottom: 18 }} />
         ))}
       </div>
@@ -260,14 +283,14 @@ const trace = (t: number): ScopeBump[] => {
     bumps.push({ x: lerp(PAGE.x + PAGE.w / 2, TUBE.w + 40, u), amp: (last ? 24 : 15) * env, sigma: last ? 34 : 26, rgb: PH.claudeRgb });
   }
   // his voice, at the end of the line nearest him
-  bumps.push({ x: TUBE.w - 34, amp: 2.5 + 13 * voiceEnv("learn", t) + Math.sin(t * 0.31), sigma: 26, rgb: PH.userRgb });
+  bumps.push({ x: TUBE.w - 34, amp: 2.5 + 13 * voiceEnv(CLIP, t + OFFSET) + Math.sin(t * 0.31), sigma: 26, rgb: PH.userRgb });
   return bumps;
 };
 
 /** What the tube shows, in tube px, under the screen's own push-in on the counter. */
 const Screen: React.FC<{ t: number; iz: number }> = ({ t, iz }) => {
-  const name = ez(t, 3, 10, EASE.enter);
-  const source = ez(t, 31, 37, EASE.enter);
+  const name = ez(t, 15, 21, EASE.enter);
+  const source = ez(t, 28, 34, EASE.enter);
   const value = counterAt(t);
   return (
     <AbsoluteFill style={{ background: PH.panel, overflow: "hidden" }}>
@@ -311,7 +334,7 @@ const Screen: React.FC<{ t: number; iz: number }> = ({ t, iz }) => {
             transform: `translateY(${((1 - name) * 10).toFixed(2)}px)`,
           }}
         >
-          {MANUAL.name}
+          {COUNTS[2].label}
         </div>
         <svg width={TUBE.w} height={TUBE.h} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
           <Scope frame={t} x0={-10} x1={TUBE.w + 10} y={TRACE_Y} bumps={trace(t)} hum={1.3} stroke={3} color="rgba(243,241,236,0.62)" />
@@ -342,8 +365,8 @@ const Screen: React.FC<{ t: number; iz: number }> = ({ t, iz }) => {
 };
 
 // ---------------------------------------------------------------- the scene
-/** His words under his chin, clear under the tube even at the tight opening (tube bottom at most about 1195). */
-const CAPTION_Y = 1240;
+/** His words under his chin (r_skill chin about 1050, 1062..1070 under the footage push); the tube ends above 960. */
+const CAPTION_Y = 1110;
 
 export const PageFlip: React.FC<FxProps> = ({ t }) => {
   const c = camAt(t);
@@ -361,7 +384,14 @@ export const PageFlip: React.FC<FxProps> = ({ t }) => {
           filter: clipFilter,
         }}
       >
-        <Clip name="learn" />
+        {t > CLIP_END ? (
+          // the clip has run out: a nested Sequence pins its time at CLIP_END, so the footage holds that frame
+          <Sequence from={t - CLIP_END} layout="none">
+            <Clip name={CLIP} offset={OFFSET} />
+          </Sequence>
+        ) : (
+          <Clip name={CLIP} offset={OFFSET} />
+        )}
       </AbsoluteFill>
       <AbsoluteFill style={{ background: "radial-gradient(ellipse at 62% 40%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.28) 100%)" }} />
       {/* camera: the tube scales about the safe rect's corner; 2.5D turn about its own center */}
@@ -397,7 +427,7 @@ export const PageFlip: React.FC<FxProps> = ({ t }) => {
           </div>
         </div>
       </div>
-      <Caption name="learn" t={t} y={CAPTION_Y} size={62} chunk={3} maxWidth={SAFE_IG.w - 40} />
+      <Caption name={CLIP} t={t} offset={OFFSET} y={CAPTION_Y} size={62} chunk={3} maxWidth={SAFE_IG.w - 40} />
     </AbsoluteFill>
   );
 };
@@ -405,8 +435,8 @@ export const PageFlip: React.FC<FxProps> = ({ t }) => {
 export const pageflip: FxDef = {
   id: "pageflip",
   command: "/page-flip",
-  menu: "A manual flips to the page that matters",
-  clip: "learn",
+  menu: "The docs flip to the page that matters",
+  clip: CLIP,
   Comp: PageFlip,
-  thumbT: [8, 22, 36],
+  thumbT: [8, 24, 34],
 };

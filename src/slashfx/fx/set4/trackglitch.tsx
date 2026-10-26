@@ -1,11 +1,12 @@
-// /track-glitch (set 4, Victor 2026-10-26, retimed after red team): Victor's clip "hook" full frame; his face is the home
-// picture. On his beats the picture swaps to a real Resolve 21 press shot, pushed in, and back: the Color page on
-// "DaVinci", back to him on "Resolve", the Edit page on "edit" (it stays through the reel's scroll-out), back to him on
-// "AI" so the probe and the ending grid end on him. Every swap is a CRT tracking glitch built like the fish8 tube's
-// (src/fish8/crt.tsx, copied, not imported): horizontal band displacement (fractal noise quantized into bands that roll
-// down the picture, one fixed seed per glitch) and a convergence split (red right, blue left). Each glitch is 6 frames:
-// 2 frames in, 1 swap frame (the only frame where two pictures mix, 50/50, at the glitch peak), 3 frames out. The swap
-// frame is the frame his word lands in. Each press shot pans slowly while it is up (EASE.travel).
+// /track-glitch (set 4, Victor 2026-10-26; re-keyed to clip "subtitles" for the A-roll rotation, dispatch/VIDEO4R.md):
+// Victor's clip "subtitles" ("add subtitles and a whole lot more.") full frame; his face is the home picture. On his
+// beats the picture swaps to a real Resolve 21 press shot, pushed in, and back: the Color page on "add", back to him on
+// "and" (he holds the whole visible hold from there), the Edit page on "lot", which stays to the end (through the reel's
+// scroll-out, and over the clip's held last frame after 2.07 s). Every swap is a CRT tracking glitch built like the
+// fish8 tube's (src/fish8/crt.tsx, copied, not imported): horizontal band displacement (fractal noise quantized into
+// bands that roll down the picture, one fixed seed per glitch) and a convergence split (red right, blue left). Each
+// glitch is 6 frames: 2 frames in, 1 swap frame (the only frame where two pictures mix, 50/50, at the glitch peak),
+// 3 frames out. The swap frame is the frame his word lands in. Each press shot pans slowly while it is up.
 // The live scope trace runs under the picture, inside the same tube, so it tears with it: his voice is the green wave
 // under him; before each glitch Claude's coral packet runs in from the left edge and spikes on the swap.
 // Camera (KEY_T, one timeline, the whole picture stack): opens tight on his face (1.06), holds, pulls out (t 9 to 25)
@@ -23,17 +24,13 @@ import { voiceEnv } from "../shutterstrike";
 
 // ---------------------------------------------------------------- the beats (his real word timings)
 const word = (w: string) => {
-  const hit = CLIPS.hook.words.find((x) => x.w.replace(/[.,]/g, "") === w);
-  if (!hit) throw new Error(`trackglitch: "${w}" is not spoken in clip hook`);
+  const hit = CLIPS.subtitles.words.find((x) => x.w.replace(/[.,]/g, "") === w);
+  if (!hit) throw new Error(`trackglitch: "${w}" is not spoken in clip subtitles`);
   return hit;
 };
-const within = (w: string, f: number) => {
-  const x = word(w);
-  return (x.s + f * (x.e - x.s)) * FPS;
-};
-/** The swap frame of each glitch: the frame his word lands in. At 24 fps: 10 ("DaVinci" at 10.6), 20 ("Resolve" at
- *  20.5), 32 ("edit" at 32.2), 42 ("AI" at 42.3). Pictures: him, Color, him, Edit, him. */
-const PEAKS = [within("DaVinci", 0.3), within("Resolve", 0.55), word("edit").s * FPS, word("AI").s * FPS].map(Math.floor);
+/** The swap frame of each glitch: the frame his word lands in. At 24 fps: 7 ("add" at 7.9), 18 ("and" at 19.0),
+ *  35 ("lot" at 35.8). Pictures: him, Color, him, Edit (to the end). */
+const PEAKS = ["add", "and", "lot"].map((w) => Math.floor(word(w).s * FPS));
 /** g > 0 on frames P - 2, P - 1 (in), P (swap, peak), P + 1..P + 3 (out); P - 3 and P + 4 are clean */
 const GROW = 3;
 const SETTLE = 4;
@@ -52,11 +49,13 @@ type Shot = { src: string; w: number; h: number; s: [number, number]; cx: [numbe
 const COLOR: Shot = { src: SHOTS.color, w: 3840, h: 2160, s: [1.12, 1.17], cx: [1520, 1420], cy: [1240, 1265] };
 /** Edit page: the program viewer and the timeline under the playhead */
 const EDIT: Shot = { src: SHOTS.edit, w: 5120, h: 2880, s: [0.92, 0.97], cx: [3620, 3770], cy: [1580, 1620] };
-/** the press shots and the glitches that bring them in and take them out (indexes into PEAKS) */
-const VISITS = [
+/** the press shots and the glitches that bring them in and take them out (indexes into PEAKS; Edit stays) */
+const VISITS: { shot: Shot; a: number; b?: number }[] = [
   { shot: COLOR, a: 0, b: 1 },
-  { shot: EDIT, a: 2, b: 3 },
+  { shot: EDIT, a: 2 },
 ];
+/** how long the Edit page pans once it is up (it never leaves) */
+const LAST_PAN = 16;
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 const PressShot: React.FC<{ shot: Shot; u: number; opacity: number }> = ({ shot, u, opacity }) => {
@@ -73,8 +72,8 @@ const PressShot: React.FC<{ shot: Shot; u: number; opacity: number }> = ({ shot,
 // ---------------------------------------------------------------- camera (the whole picture stack)
 const KEY_T = [0, 9, 25, 48];
 const key = (t: number, v: number[]) => interpolate(t, KEY_T, v, { ...CLAMP, easing: EASE.travel });
-/** his face in the clip: the camera grows him in place */
-const ORIGIN = { x: 560, y: 840 };
+/** his face in the clip (head x 370..805, y 500..1075): the camera grows him in place */
+const ORIGIN = { x: 588, y: 800 };
 const camAt = (t: number) => ({
   z: key(t, [1.06, 1.055, 1.012, 1.008]),
   // at z 1.008 the footage overscans 4 px or more on every side, so the drift never shows an edge
@@ -86,13 +85,13 @@ const NEAR = 1.35;
 
 // ---------------------------------------------------------------- the trace
 const TY = 1452;
-const VOICE_X = 560;
+const VOICE_X = 588;
 /** where each glitch's packet spikes, alternating either side of him */
-const SPIKE_X = [360, 720, 440, 640];
+const SPIKE_X = [380, 790, 450];
 const RUN = 8;
 const bumpsAt = (t: number): ScopeBump[] => {
   const out: ScopeBump[] = [
-    { x: VOICE_X, amp: voiceEnv("hook", t) * (14 + 4 * Math.sin(t * 0.61) + 2 * Math.sin(t * 1.37)), sigma: 34, rgb: PH.userRgb },
+    { x: VOICE_X, amp: voiceEnv("subtitles", t) * (14 + 4 * Math.sin(t * 0.61) + 2 * Math.sin(t * 1.37)), sigma: 34, rgb: PH.userRgb },
   ];
   // one packet per glitch: it runs in from the left edge, spikes on the swap frame, then fades where it stopped
   PEAKS.forEach((p, k) => {
@@ -162,8 +161,8 @@ export const TrackGlitch: React.FC<FxProps> = ({ t }) => {
   });
   // each press shot dissolves in over him on its swap frame in and back out to him on its swap frame out
   const press = VISITS.map(({ shot, a, b }) => {
-    const opacity = swap(t, PEAKS[a]) * (1 - swap(t, PEAKS[b]));
-    const u = ez(t, PEAKS[a] - 1, PEAKS[b] + 1, EASE.travel);
+    const opacity = swap(t, PEAKS[a]) * (b === undefined ? 1 : 1 - swap(t, PEAKS[b]));
+    const u = ez(t, PEAKS[a] - 1, b === undefined ? PEAKS[a] + LAST_PAN : PEAKS[b] + 1, EASE.travel);
     return { shot, opacity, u };
   });
   const onPress = Math.max(...press.map((p) => p.opacity));
@@ -181,7 +180,7 @@ export const TrackGlitch: React.FC<FxProps> = ({ t }) => {
             transform: `translate(${cam.dx.toFixed(2)}px, ${cam.dy.toFixed(2)}px) scale(${cam.z.toFixed(5)})`,
           }}
         >
-          <Clip name="hook" />
+          <Clip name="subtitles" />
           {press.map((p) => (p.opacity > 0.001 ? <PressShot key={p.shot.src} shot={p.shot} u={p.u} opacity={p.opacity} /> : null))}
         </div>
         <svg width={W} height={H} style={{ position: "absolute", left: 0, top: 0, overflow: "visible", transform: `translate(${near.x.toFixed(2)}px, ${near.y.toFixed(2)}px)` }}>
@@ -200,7 +199,7 @@ export const TrackGlitch: React.FC<FxProps> = ({ t }) => {
         }}
       />
       <div style={{ position: "absolute", inset: 0, transform: `translate(${near.x.toFixed(2)}px, ${near.y.toFixed(2)}px)` }}>
-        <Caption name="hook" t={t} y={1112} size={62} chunk={3} maxWidth={SAFE_IG.w - 40} />
+        <Caption name="subtitles" t={t} y={1112} size={62} chunk={3} maxWidth={SAFE_IG.w - 40} />
       </div>
     </AbsoluteFill>
   );
@@ -210,7 +209,8 @@ export const trackglitch: FxDef = {
   id: "trackglitch",
   command: "/track-glitch",
   menu: "Press shots swap in on a tracking glitch",
-  clip: "hook",
+  clip: "subtitles",
   Comp: TrackGlitch,
-  thumbT: [16, 28, 36],
+  // Color clean (11..15), him clean (22..32), Edit clean (39 on)
+  thumbT: [13, 27, 41],
 };

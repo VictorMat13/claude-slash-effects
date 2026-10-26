@@ -7,4 +7,4 @@ import { wordscope } from "./wordscope";
 import { logobridge } from "./logobridge";
 import { splitwipe } from "./splitwipe";
 
-export const SET2: FxDef[] = [logobridge, pageflip, wordscope, timelinescrub, tickertape, splitwipe];
+export const SET2: FxDef[] = [tickertape, logobridge, wordscope, timelinescrub, pageflip, splitwipe];

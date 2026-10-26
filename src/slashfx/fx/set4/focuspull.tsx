@@ -1,5 +1,6 @@
-// /focus-pull (set 4): Victor's take "colorgrade" full frame, and one see-through CRT label pane hanging above-left of his
-// head. The pane carries one entry of the verbatim job list Blackmagic publishes (JOBS in data/facts.ts, from ARTICLES[3],
+// /focus-pull (set 4): Victor's take "focus" full frame (Video 4 A-roll: "so they can focus on the creative decisions that
+// actually matter."; head at rest x 360..830, y 495..1070 from clips.ts), and one see-through CRT label pane hanging
+// above-left of his head. The pane carries one entry of the verbatim job list Blackmagic publishes (JOBS in data/facts.ts, from ARTICLES[3],
 // PTTL.gr): the kicker "Blackmagic lists" and the source name are cut from that same article, verbatim.
 // The camera racks focus between two planes on his beats: the near plane (the pane) and the far plane (him).
 //  - focus on the label: the pane is sharp, his footage blurs 6 px and dims 15 percent (a CSS filter on the footage layer),
@@ -11,6 +12,10 @@
 // frame around him). His real voice (word timings of the take) is the green swell beside his mouth; on each rack to the
 // label a green packet runs from his voice up into the pane, and the pane answers in coral; on each rack back to him a
 // coral packet leaves the pane and runs down to the line under his chin. His words sit under that line (the caption).
+// Racks on his words (the take starts 20 frames in, so he is saying "focus" on the first frame): the label is sharp on
+// "focus", focus racks back to him into "creative", to the label on "decisions", back to him into "actually", and to the
+// label again on "matter". "focus" to "matter" is 50 frames of the take, longer than the 42 the reel shows of an effect,
+// so the "matter" rack starts at t 45, at the tail of the stage.
 // Camera: hold at 1.03, one push to 1.06 anchored on his forehead, hold; a 5 px sine drift; never past 1.07 with the breath.
 // The pane and the trace sit nearer the lens: they ride the drift 1.3x (parallax).
 // Timing at 24 fps: card t 0..9, push 9..14, full screen 14..48, alive to 60. Every value is a pure function of t.
@@ -21,17 +26,31 @@ import { AbsoluteFill, Easing, interpolate } from "remotion";
 import { PH } from "../../../artcraft/theme";
 import { ARTICLES, JOBS } from "../../data/facts";
 import { Caption, Clip, MONO } from "../../kit";
-import { CLAMP, EASE, H, SAFE_IG, UI, W, ez, lerp, type FxDef, type FxProps } from "../../theme";
+import { CLAMP, EASE, FPS, H, SAFE_IG, UI, W, ez, lerp, type FxDef, type FxProps } from "../../theme";
+import { CLIPS } from "../../data/clips";
 import { voiceEnv } from "../shutterstrike";
 
-const CLIP = "colorgrade" as const;
+const CLIP = "focus" as const;
+/** The take starts this many frames in: "focus" is under way on the first frame. */
+const OFFSET = Math.round(0.84 * FPS);
 
 // ---- focus
 /** Frames one rack takes. */
 const RACK = 8;
-/** Rack starts. Focus opens on the label; even entries rack to him (the pane goes soft), odd ones rack back to the label.
- *  On his beats: the label sharpens on "grade" (18) and "your" (48), softens into "trim" (36). */
-const RACKS = [6, 18, 36, 48, 64, 76];
+/** Effect frame at which he starts a word of the take (punctuation ignored). */
+const wordAt = (word: string, fallback: number) => {
+  const w = CLIPS[CLIP].words.find((x) => x.w.replace(/[.,!?]/g, "") === word);
+  return w ? w.s * FPS - OFFSET : fallback;
+};
+/** Rack starts, from his word timings. Focus opens on the label (on "focus"); even entries rack to him (the pane goes
+ *  soft and swaps its job), odd ones rack back to the label. At 24 fps: 1.8, 14, 27.2, 45.3, 61.3. */
+const RACKS = (() => {
+  const toHimCreative = wordAt("creative", 9.8) - RACK; // lands as he starts "creative"
+  const toLabelDecisions = wordAt("decisions", 16) - 2; // pulls to the label on "decisions"
+  const toHimActually = wordAt("actually", 35.2) - RACK; // lands as he starts "actually"
+  const toLabelMatter = wordAt("matter", 45.3); // pulls to the label on "matter"
+  return [toHimCreative, toLabelDecisions, toHimActually, toLabelMatter, toLabelMatter + 16];
+})();
 /** 1 = focus on the label (pane sharp, him soft), 0 = focus on him. */
 const focusAt = (t: number) => {
   let f = 1;
@@ -42,12 +61,12 @@ const focusAt = (t: number) => {
   }
   return f;
 };
-/** The job on the pane: it swaps to the next JOBS entry while the pane is soft (5 to 12 frames into each rack to him). */
+/** The job on the pane: it swaps to the next JOBS entry while the pane is soft (4 to 10 frames into each rack to him). */
 const jobAt = (t: number) => {
   let n = 0;
   let q = 0;
   for (let i = 0; i < RACKS.length; i += 2) {
-    const p = ez(t, RACKS[i] + 5, RACKS[i] + 12, EASE.inOut);
+    const p = ez(t, RACKS[i] + 4, RACKS[i] + 10, EASE.inOut);
     if (p >= 1) n++;
     else {
       q = p;
@@ -65,7 +84,7 @@ const BLUR_PANE = 9;
 
 // ---- camera
 /** Push origin: his forehead, so the push grows him downward and his hair stays clear of the pane. */
-const ORIGIN = { x: 575, y: 640 };
+const ORIGIN = { x: 595, y: 640 };
 const KEY_T = [0, 10, 28, 48];
 const ZOOM = [1.03, 1.03, 1.06, 1.06];
 const CAM_EASE = Easing.inOut(Easing.cubic);
@@ -130,14 +149,14 @@ const pathAt = (p: Path, at: number) => {
 };
 
 const YT = PANE.top + PANE_H + 22;
-const XR = 892;
+const XR = 912;
 const YB = 1150;
 const TRACE = buildPath([
-  ["L", { x: -80, y: YT }, { x: 780, y: YT }],
-  ["C", { x: 780, y: YT }, { x: 850, y: YT }, { x: XR, y: YT + 40 }, { x: XR, y: YT + 110 }],
+  ["L", { x: -80, y: YT }, { x: XR - 112, y: YT }],
+  ["C", { x: XR - 112, y: YT }, { x: XR - 42, y: YT }, { x: XR, y: YT + 40 }, { x: XR, y: YT + 110 }],
   ["L", { x: XR, y: YT + 110 }, { x: XR, y: YB - 110 }],
-  ["C", { x: XR, y: YB - 110 }, { x: XR, y: YB - 40 }, { x: 850, y: YB }, { x: 780, y: YB }],
-  ["L", { x: 780, y: YB }, { x: -80, y: YB }],
+  ["C", { x: XR, y: YB - 110 }, { x: XR, y: YB - 40 }, { x: XR - 42, y: YB }, { x: XR - 112, y: YB }],
+  ["L", { x: XR - 112, y: YB }, { x: -80, y: YB }],
 ]);
 /** Arc length of the point on the trace nearest to (x, y) (sampled; only used for the fixed spots below). */
 const sNear = (x: number, y: number) => {
@@ -155,7 +174,7 @@ const sNear = (x: number, y: number) => {
 /** Under the pane (where the label answers), beside his mouth (his voice), under his chin (where Claude's packet lands). */
 const S_LABEL = sNear(300, YT);
 const S_VOICE = sNear(XR, 960);
-const S_CHIN = sNear(560, YB);
+const S_CHIN = sNear(ORIGIN.x, YB);
 const TRACE_INK = "rgba(243,241,236,0.58)";
 
 type Bump = { s: number; amp: number; sigma: number; rgb: string };
@@ -217,7 +236,7 @@ const traceAt = (t: number) => {
   const coral = PH.claudeRgb;
   const bumps: Bump[] = [];
   // His voice beside his mouth (real word timings of the take).
-  bumps.push({ s: S_VOICE, amp: 3 + voiceEnv(CLIP, t) * (12 + 4 * Math.sin(t * 0.61) + 2.5 * Math.sin(t * 1.37)), sigma: 46, rgb: green });
+  bumps.push({ s: S_VOICE, amp: 3 + voiceEnv(CLIP, t + OFFSET) * (12 + 4 * Math.sin(t * 0.61) + 2.5 * Math.sin(t * 1.37)), sigma: 46, rgb: green });
   // The pane's quiet coral hum, swelling when it lands sharp.
   let answer = 0;
   for (let i = 1; i < RACKS.length; i += 2) {
@@ -360,7 +379,7 @@ export const FocusPull: React.FC<FxProps> = ({ t }) => {
         }}
       >
         <div style={{ position: "absolute", inset: 0, filter: `blur(${(BLUR_HIM * f).toFixed(2)}px) brightness(${(1 - DIM_HIM * f).toFixed(4)})` }}>
-          <Clip name={CLIP} />
+          <Clip name={CLIP} offset={OFFSET} />
         </div>
       </div>
       <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 54% 40%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.26) 100%)" }} />
@@ -371,7 +390,7 @@ export const FocusPull: React.FC<FxProps> = ({ t }) => {
         </svg>
         <LabelPane t={t} f={f} />
       </div>
-      <Caption name={CLIP} t={t} y={YB + 24} size={60} chunk={3} maxWidth={SAFE_IG.w - 40} />
+      <Caption name={CLIP} t={t} offset={OFFSET} y={YB + 24} size={60} chunk={3} maxWidth={SAFE_IG.w - 40} />
     </AbsoluteFill>
   );
 };
@@ -380,7 +399,7 @@ export const focuspull: FxDef = {
   id: "focuspull",
   command: "/focus-pull",
   menu: "Focus racks between you and the label",
-  clip: "colorgrade",
+  clip: "focus",
   Comp: FocusPull,
-  thumbT: [14, 30, 44],
+  thumbT: [12, 24, 40],
 };

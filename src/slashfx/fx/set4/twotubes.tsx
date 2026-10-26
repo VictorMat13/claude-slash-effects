@@ -1,18 +1,20 @@
 // /two-tubes (set 4, builder FX-A; dispatch/VIDEO4.md). Victor full frame (clip "prompt": "So if you prompt something
-// like,"). Two small see-through CRT tubes sit side by side above his head (y 300..520 at rest), labeled in mono with
+// like,"). Two small see-through CRT tubes sit side by side above his head (y 286..458 at rest), labeled in mono with
 // ASSISTANTS[0] ("Claude") and ASSISTANTS[2] ("ChatGPT Codex"), verbatim from facts.ts. One live scope trace runs under
 // both tubes and joins them; his voice is the wave in the middle of it, right above his head. The JOBS list (verbatim)
 // is dealt from there in order, alternating tubes: each job leaves the middle of the trace as a packet (coral into the
 // Claude tube on the left, green into the Codex tube on the right), and when it arrives under its tube the tube's
 // keyline flashes in that color and the job types in (the job before it slides up under the header and fades).
 // Packets land on his word onsets ("So", "prompt", "something", "like,") and keep the same rhythm after his line ends.
-// Camera (one keyframe timeline, anchored on the tubes): tight on the tubes (overlay plane 1.15, his footage 1.07),
-// hold, then pull out (t 11 to 29) to the rest framing (overlay 1.0, footage 1.016), hold and breathe. 2.5D: the
-// tubes are nearer the lens than his face (the overlay takes the larger zoom and 1.25x the drift), each tube is turned
-// a few degrees toward the middle, and they float out of phase. His footage never goes past 1.07.
+// Camera (one keyframe timeline): tight on the tubes (overlay plane 1.15 about the tubes' top edge, his footage 1.07
+// about the top of the frame), hold, then pull out (t 11 to 29) to the rest framing (overlay 1.0, footage 1.016), hold
+// and breathe. 2.5D: the tubes are nearer the lens than his face (the overlay takes the larger zoom and the drift), each
+// tube is turned a few degrees toward the middle, and they float out of phase. His footage never goes past 1.07.
 // Caption: his words, white, under his chin. Safe zone (SAFE_IG, x 60..1000, y 270..1580): tubes, labels, logs,
 // packets and caption stay inside at every t 0..60, including the tight opening (zoom 1.15 is the widest frame).
-// His face is never covered: the tubes end above his hairline (they cross only the top of his hair).
+// Recut clip (2026-10-26, crop x 1255, head x 355..845, y 470..1150 at rest, he leans in): the tubes end at least 10 px
+// above his head's top bound at every t, including the tight opening (the footage zooms about the frame top, so his
+// head sits lower while the tubes are big); only the trace line crosses his hair. The caption sits under his chin.
 import React from "react";
 import { AbsoluteFill, interpolate, interpolateColors } from "remotion";
 import { Scope, type ScopeBump } from "../../../artcraft/kit/Scope";
@@ -35,14 +37,18 @@ import {
 import { voiceEnv } from "../shutterstrike";
 
 // ---------------------------------------------------------------- camera: one keyframe timeline, hold, pull out, hold
-const ANCHOR = { x: W / 2, y: 430 };
+/** The overlay zooms about the tubes' top edge (so they grow down, never up out of the rect); the footage zooms about
+ *  the top of the frame (so at the tight opening his head sits lower, clear of the big tubes). */
+const OVER_ANCHOR = { x: W / 2, y: 286 };
+const FOOT_ANCHOR = { x: W / 2, y: 0 };
 const KEY_T = [0, 11, 29, 48];
 const key = (t: number, v: number[]) =>
   interpolate(t, KEY_T, v, { ...CLAMP, easing: EASE.travel });
 /** The tubes' plane (nearer the lens) and his footage (farther): the footage never passes 1.07. */
 const Z_OVER = [1.15, 1.144, 1.0, 0.994];
 const Z_FOOT = [1.07, 1.068, 1.016, 1.014];
-/** Drift (px). At zoom 1.014 the footage overscans at least 6 px on every side of the anchor, so no edge shows. */
+/** Drift (px). The footage drifts sideways only (at 1.014 about x 540 it overscans 7.5 px each side; its top edge is the
+ *  zoom anchor, so it must not drift down); the overlay also bobs a little vertically. */
 const driftAt = (t: number) => ({
   x: 3.5 * Math.sin(t * 0.075 + 0.3),
   y: 2.5 * Math.sin(t * 0.06 + 1.2),
@@ -50,15 +56,15 @@ const driftAt = (t: number) => ({
 const NEAR = 1.25;
 
 // ---------------------------------------------------------------- tubes (world px on the overlay plane, at zoom 1)
-const TUBE = { w: 368, h: 220, top: 300, gap: 34, r: 26 } as const;
+const TUBE = { w: 368, h: 172, top: OVER_ANCHOR.y, gap: 34, r: 24 } as const;
 const PAD = 18;
-const HEADER_H = 56;
-const BODY_TOP = HEADER_H + 6;
-const BODY_H = TUBE.h - BODY_TOP - 10;
+const HEADER_H = 50;
+const BODY_TOP = HEADER_H + 4;
+const BODY_H = TUBE.h - BODY_TOP - 6;
 const BODY_W = TUBE.w - 2 * PAD;
 const CARET_W = 16;
 const TEXT = 34;
-const LINE = 40;
+const LINE = 37;
 /** Space between the outgoing job and the incoming one during a hand-off. */
 const HANDOFF = 14;
 const CHARS = Math.floor((TUBE.w - 2 * PAD) / (0.6 * TEXT));
@@ -70,7 +76,7 @@ const tubeCx = (s: Side) =>
 const RGB = [PH.claudeRgb, PH.userRgb] as const;
 const LABEL = [ASSISTANTS[0], ASSISTANTS[2]] as const;
 /** The trace runs under both tubes. */
-const TRACE_Y = TUBE.top + TUBE.h + 28;
+const TRACE_Y = TUBE.top + TUBE.h + 22;
 const MID_X = W / 2;
 
 // ---------------------------------------------------------------- the jobs: dealt in order, alternating tubes
@@ -410,21 +416,21 @@ const bumpsAt = (t: number): ScopeBump[] => {
 };
 
 // ---------------------------------------------------------------- the scene
-/** His words under his chin (chin about y 1100 at rest, up to 1150 at the tight opening). */
-const CAPTION_Y = 1192;
+/** His words under his chin (chin bound 1150 in the clip: about 1166 on screen at rest, 1229 when the caption first shows). */
+const CAPTION_Y = 1252;
 
 export const TwoTubes: React.FC<FxProps> = ({ t }) => {
   const zo = key(t, Z_OVER);
   const zf = key(t, Z_FOOT);
   const d = driftAt(t);
-  const cam = (z: number, k: number) =>
-    `translate(${(d.x * k).toFixed(2)}px, ${(d.y * k).toFixed(2)}px) scale(${z.toFixed(5)})`;
+  const cam = (z: number, kx: number, ky: number) =>
+    `translate(${(d.x * kx).toFixed(2)}px, ${(d.y * ky).toFixed(2)}px) scale(${z.toFixed(5)})`;
   return (
     <AbsoluteFill style={{ background: UI.bg, overflow: "hidden" }}>
       <AbsoluteFill
         style={{
-          transform: cam(zf, 1),
-          transformOrigin: `${ANCHOR.x}px ${ANCHOR.y}px`,
+          transform: cam(zf, 1, 0),
+          transformOrigin: `${FOOT_ANCHOR.x}px ${FOOT_ANCHOR.y}px`,
         }}
       >
         <Clip name="prompt" />
@@ -438,8 +444,8 @@ export const TwoTubes: React.FC<FxProps> = ({ t }) => {
       />
       <AbsoluteFill
         style={{
-          transform: cam(zo, NEAR),
-          transformOrigin: `${ANCHOR.x}px ${ANCHOR.y}px`,
+          transform: cam(zo, NEAR, NEAR),
+          transformOrigin: `${OVER_ANCHOR.x}px ${OVER_ANCHOR.y}px`,
         }}
       >
         <svg

@@ -2,7 +2,7 @@
 // card, and full screen) and which of our six effects each grid cell plays. Reference: f0166 to f0223 (16.5 s to 22.3 s).
 import { CLIPS, type ClipName } from "../data/clips";
 import { FX } from "../fx";
-import { UI, CARD, ENDING_LEN, FPS, KEYWORD, PAYLOAD, SAFE_IG, W } from "../theme";
+import { UI, CARD, ENDING_LEN, FPS, KEYWORD, PAYLOAD, SAFE_IG, SET, W } from "../theme";
 
 /** The timeline was specced at 30 fps (agent-END.md); every frame is derived from those numbers at the reel's FPS. */
 export const at = (f30: number) => Math.round((f30 * FPS) / 30);
@@ -158,7 +158,12 @@ const spoken = (clip: ClipName, word: string) => {
   if (!list.some((x) => x.w.replace(/[.,!?]/g, "") === word)) throw new Error(`"${word}" is not spoken in clip ${clip}`);
   return word;
 };
-export const WORDS = [
+// Per take (dispatch/ROTATION.md): sets 1 and 4 play over the DaVinci take, set 2 over the Remotion take, set 3 over ArtCraft.
+const WORDS_BY_SET: Record<number, string[]> = {
+  2: [spoken("r_hook", "motion"), spoken("r_hook", "AI"), spoken("r_free", "prompts"), spoken("r_skill", "skill"), spoken("r_movement", "movement"), spoken("r_prompts", "specific")],
+  3: [spoken("a_hook", "Claude"), spoken("a_hook", "Photoshop"), spoken("a_hook", "free"), spoken("a_build", "build"), spoken("a_shortcuts", "shortcuts"), spoken("a_nocode", "code")],
+};
+export const WORDS = WORDS_BY_SET[SET] ?? [
   spoken("hook", "edit"),
   spoken("hook", "AI"),
   spoken("hook", "inside"),

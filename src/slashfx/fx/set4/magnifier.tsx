@@ -585,7 +585,7 @@ export const magnifier: FxDef = {
   id: "magnifier",
   command: "/magnifier",
   menu: "A CRT lens locked on the word that matters",
-  clip: "connect",
+  clip: "learn",
   Comp: Magnifier,
   thumbT: [8, 21, 36],
 };

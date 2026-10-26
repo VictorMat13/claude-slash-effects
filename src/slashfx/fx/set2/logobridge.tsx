@@ -1,25 +1,37 @@
-// /logo-bridge (set 2, builder S2-A). Victor full frame, face centered (clip "hook": "DaVinci Resolve lets you edit with
-// AI right inside the app."). The official Claude mark and the official Resolve icon sit on a slow 2.5D orbit around his
-// head, left and right of it (never over his face), each on its own small dark CRT disc with a keyline. As the ring turns,
-// Resolve starts in front (bigger, lower, sharp) and swings back, Claude starts behind (smaller, higher, a little soft) and
-// comes forward, so the two trade depth over the shot.
+// /logo-bridge (set 2, builder S2-A; retargeted 2026-10-26 to the Remotion take, dispatch/VIDEO2R.md). Victor full frame,
+// face centered (clip "r_free": "A free tool that turns prompts into motion graphics."). The official Claude mark and the
+// official Remotion mark (LOGOS.resolve now points at it) sit on a slow 2.5D orbit around his head, left and right of it
+// (never over his face), each on its own small dark CRT disc with a keyline. As the ring turns, Remotion starts in front
+// (bigger, lower, sharp) and swings back, Claude starts behind (smaller, higher, a little soft) and comes forward, so the two
+// trade depth over the shot.
 // One live scope trace leaves each disc and arcs over his hair; at the top of the arc a small see-through CRT pane carries
 // MCP.phrase in mono with MCP.expansion under it (verbatim, facts.ts). Coral packets leave Claude, green packets leave
-// Resolve, and they cross under the pane exactly on his beats ("Resolve", "lets", "edit": the word onsets in clips.ts), then
-// run on into the other disc, which answers with one soft ring. Each disc speaks up on the line as its packet leaves; the
-// whole carrier hums with his real voice envelope.
+// Remotion, and they cross under the pane exactly on his beats ("free", "prompts", "motion": the word onsets in clips.ts),
+// then run on into the other disc, which answers with one soft ring. Each disc speaks up on the line as its packet leaves;
+// the whole carrier hums with his real voice envelope.
+// Timing: the reel mounts the effect for t 0..41 and scrolls it out from t 32, and "motion" is 41 frames into the clip, so
+// the clip starts OFFSET frames in (still on "A free tool"): "prompts" and "motion" cross in the full-screen hold (t 17, 31),
+// and the "free" crossing happens just before the card resolves, its packets already running on at t 0.
 // Camera: hold, one push 1.012 to 1.05 anchored on his head (never past 1.07), hold; a small sine drift throughout, the
 // overlay plane riding it a little more than the footage (parallax). Caption: his words, white, under his chin.
 // Safe zone: discs, pane, packets and caption stay inside SAFE_IG (x 60..1000, y 270..1580) at every t, including the push,
-// the drift and the orbit's front-most frame. Timing at 24 fps: card t 0..9, push 9..14, full screen 14..42, alive to 48.
+// the drift and the orbit's front-most frame; the pane also clears the 4:5 feed crop (y 285). Timing at 24 fps: card t 0..9,
+// push 9..14, full screen 14..41, alive to 48.
 import React from "react";
-import { AbsoluteFill, Img, interpolate, staticFile } from "remotion";
+import { AbsoluteFill, Img, Sequence, interpolate, staticFile } from "remotion";
 import { PH } from "../../../artcraft/theme";
 import { CLIPS } from "../../data/clips";
 import { LOGOS, MCP } from "../../data/facts";
-import { Caption, Clip, MONO } from "../../kit";
+import { Caption, Clip, INTER, MONO } from "../../kit";
 import { CLAMP, EASE, FPS, H, SAFE_IG, UI, W, ez, lerp, type FxDef, type FxProps } from "../../theme";
 import { voiceEnv } from "../shutterstrike";
+
+// ---------------------------------------------------------------- the take
+const CLIP = "r_free" as const;
+/** Frames into the clip at t 0 (0.42 s, inside "tool"; the caption still reads "A free tool"). */
+const OFFSET = Math.round(0.4167 * FPS);
+/** Last t the clip can play (2-frame margin); after it the footage holds that frame (2.8 s clip: never reached by t 48). */
+const CLIP_END = Math.floor(CLIPS[CLIP].dur * FPS) - OFFSET - 2;
 
 // ---------------------------------------------------------------- camera (one keyframe timeline: hold, push, hold)
 /** Push anchor: between his eyes and his brow, so the push grows him in place. */
@@ -33,7 +45,7 @@ const driftAt = (t: number) => ({ x: 4 * Math.sin(t * 0.08 + 0.3), y: 3 * Math.s
 const NEAR = 1.25;
 
 // ---------------------------------------------------------------- the orbit (world px = footage px before the push)
-/** Head center of this take (x about 340..830, hair top about 500, chin about 1070..1110). */
+/** Head center of this take (r_free at rest: x 355..790, y 500..990; he leans a little left at the start). */
 const HEAD_X = 580;
 const A_MAX = 26;
 /** Ring angle in degrees: eased across the whole shot so it is still turning at t 48. */
@@ -118,10 +130,11 @@ const pathAt = (p: Path, at: number) => {
 };
 
 /** The pane at the top of the arc (world px) and the flat run of the trace under it. */
-const PANE = { cx: 585, top: 326, w: 404, h: 98 } as const;
-const AY = 452;
+const PANE = { cx: 585, top: 314, w: 404, h: 124 } as const;
+/** The flat run sits under the pane and above his hair (top about 500, about 490 at the push), with room for a crossing. */
+const AY = 462;
 const HALF = 150;
-/** Left cubic from the Claude disc center up over his hair, the flat run under the pane, the right cubic down into Resolve.
+/** Left cubic from the Claude disc center up over his hair, the flat run under the pane, the right cubic down into Remotion.
  *  Both ends start under their discs, so the line leaves each rim. marks[0] is where the flat run starts. */
 const traceAt = (t: number) => {
   const c = poseAt("claude", t);
@@ -135,13 +148,13 @@ const traceAt = (t: number) => {
 };
 
 // ---------------------------------------------------------------- beats and packets
-/** His real word onsets (clips.ts), in effect frames: the packets cross under the pane on these (t 15, 25, 32.2). The reel
- *  mounts the effect for t 0..41 and scrolls it out from t 32, so all three land while it is on screen, two in the hold. */
+/** His real word onsets (clips.ts), in effect frames (clip time minus OFFSET): the packets cross under the pane on these
+ *  (t -4, 16.9, 31.2 at 24 fps). The reel mounts the effect for t 0..41 and scrolls it out from t 32. */
 const onset = (w: string) => {
-  const hit = CLIPS.hook.words.find((x) => x.w === w);
-  return hit ? hit.s * FPS : 0;
+  const hit = CLIPS[CLIP].words.find((x) => x.w === w);
+  return hit ? hit.s * FPS - OFFSET : 0;
 };
-const BEATS = [onset("Resolve"), onset("lets"), onset("edit")];
+const BEATS = [onset("free"), onset("prompts"), onset("motion")];
 /** Frames from a disc to the crossing (and on from the crossing to the other disc). */
 const HALF_TRIP = 11;
 const gauss = (x: number, c: number, sg: number) => Math.exp(-((x - c) ** 2) / (2 * sg * sg));
@@ -163,8 +176,13 @@ const bumpsAt = (t: number, L: number, mid: number) => {
     const u = ez(t, t0, t1, EASE.inOut);
     const env = interpolate(t, [t0, t0 + 3, t1 - 3, t1], [0, 1, 1, 0], CLAMP);
     const wob = 0.92 + 0.08 * Math.sin(t * 0.7 + i);
-    bumps.push({ s: L * through(u, mid / L), amp: 19 * env * wob, sigma: 30, rgb: coral });
-    bumps.push({ s: L - L * through(u, 1 - mid / L), amp: 19 * env * wob, sigma: 30, rgb: green });
+    const sC = L * through(u, mid / L);
+    const sG = L - L * through(u, 1 - mid / L);
+    // where the two packets overlap their waves would add up to twice the height and reach into his hair: each gives way
+    // a little as they meet, so the crossing peaks near one packet's height (smooth, it follows their distance)
+    const meet = 1 - 0.45 * gauss(sC, sG, 45);
+    bumps.push({ s: sC, amp: 19 * env * wob * meet, sigma: 30, rgb: coral });
+    bumps.push({ s: sG, amp: 19 * env * wob * meet, sigma: 30, rgb: green });
   });
   // Each mark keeps a quiet voice just outside its rim and speaks up as its packet leaves.
   bumps.push({ s: 74, amp: 3.5 + 1.5 * Math.sin(t * 0.23) + 11 * speakC, sigma: 30, rgb: coral });
@@ -223,7 +241,7 @@ const Wire: React.FC<{ path: Path; t: number; ranges: [number, number][]; bumps:
 // ---------------------------------------------------------------- the discs
 /** One soft ring as a packet arrives (the mark answers), in the packet's color. */
 const Ring: React.FC<{ p: Pose; at: number; t: number; rgb: string }> = ({ p, at, t, rgb }) => {
-  // grows only 12 px: the Resolve disc sits near the safe right edge at the push, and the ring must stay inside it
+  // grows only 12 px: the Remotion disc sits near the safe right edge at the push, and the ring must stay inside it
   const k = (t - at) / 15;
   if (k < 0 || k > 1) return null;
   const r = R0 * p.s + 12 * EASE.decel(k);
@@ -248,7 +266,7 @@ const Ring: React.FC<{ p: Pose; at: number; t: number; rgb: string }> = ({ p, at
 const Disc: React.FC<{ p: Pose; t: number; side: Side; talk: number; inP: number }> = ({ p, t, side, talk, inP }) => {
   const rgb = side === "claude" ? PH.claudeRgb : PH.userRgb;
   const src = side === "claude" ? LOGOS.claude : LOGOS.resolve;
-  const logo = side === "claude" ? 0.56 : 0.66;
+  const logo = side === "claude" ? 0.56 : 0.6;
   const size = 2 * R0;
   const lift = lerp(10, 0, inP);
   return (
@@ -312,12 +330,19 @@ const Disc: React.FC<{ p: Pose; t: number; side: Side; talk: number; inP: number
 // ---------------------------------------------------------------- the MCP pane at the top of the arc
 const PHRASE = 34;
 const EXPAN = 28;
+/** MCP.expansion on two fixed lines, broken at the space nearest its middle (verbatim, only line-broken). */
+const EXP_LINES = (() => {
+  const x = MCP.expansion;
+  let best = -1;
+  for (let i = 0; i < x.length; i++) if (x[i] === " " && (best < 0 || Math.abs(i - x.length / 2) < Math.abs(best - x.length / 2))) best = i;
+  return best < 0 ? [x] : [x.slice(0, best), x.slice(best + 1)];
+})();
 const typed = (s: string, p: number) => s.slice(0, Math.round(s.length * p));
 const McpPane: React.FC<{ t: number; flash: number }> = ({ t, flash }) => {
   // powers on out of the trace (scaleY from its bottom edge), then the phrase and the expansion type in
   const on = ez(t, 2, 9, EASE.decel);
   const p1 = ez(t, 7, 14, EASE.inOut);
-  const p2 = ez(t, 11, 21, EASE.inOut);
+  const p2 = ez(t, 11, 23, EASE.inOut);
   const caret = p2 < 1 || Math.floor(t / 6) % 2 === 0;
   const floatY = 2 * Math.sin(t * 0.13 + 0.6) - 3 * flash;
   const split = "1px 0 0 rgba(255,70,50,0.45), -1px 0 0 rgba(60,150,255,0.45)";
@@ -379,7 +404,7 @@ const McpPane: React.FC<{ t: number; flash: number }> = ({ t, flash }) => {
             }}
           />
         ) : null}
-        <div style={{ position: "absolute", left: 0, right: 0, top: 12, textAlign: "center", whiteSpace: "nowrap" }}>
+        <div style={{ position: "absolute", left: 16, right: 16, top: 8, textAlign: "center" }}>
           <div
             style={{
               fontFamily: MONO,
@@ -387,6 +412,7 @@ const McpPane: React.FC<{ t: number; flash: number }> = ({ t, flash }) => {
               fontSize: PHRASE,
               lineHeight: 1.12,
               letterSpacing: -0.5,
+              whiteSpace: "nowrap",
               color: UI.screenInk,
               opacity: 0.9 + 0.1 * flash,
               textShadow: split,
@@ -397,23 +423,35 @@ const McpPane: React.FC<{ t: number; flash: number }> = ({ t, flash }) => {
           </div>
           <div
             style={{
-              marginTop: 6,
-              fontFamily: MONO,
+              marginTop: 4,
+              fontFamily: INTER,
               fontWeight: 500,
               fontSize: EXPAN,
               lineHeight: 1.12,
-              letterSpacing: -0.7,
-              color: "rgba(236,233,226,0.72)",
+              letterSpacing: -0.3,
+              color: "rgba(236,233,226,0.76)",
               textShadow: split,
             }}
           >
-            {typed(MCP.expansion, p2)}
-            <span style={{ display: "inline-block", width: 0, position: "relative" }}>
-              {p1 > 0.99 && caret ? (
-                <span style={{ position: "absolute", left: 3, top: 3, width: 13, height: EXPAN - 4, background: UI.coral, opacity: 0.9 }} />
-              ) : null}
-            </span>
-            <span style={{ opacity: 0 }}>{MCP.expansion.slice(typed(MCP.expansion, p2).length)}</span>
+            {EXP_LINES.map((line, i) => {
+              // the two lines type one after the other; each is nowrap, so nothing reflows while it types
+              const a = i === 0 ? 0 : EXP_LINES[0].length / MCP.expansion.length;
+              const b = i === 0 ? EXP_LINES[0].length / MCP.expansion.length : 1;
+              const lp = interpolate(p2, [a, b], [0, 1], CLAMP);
+              const shown = typed(line, lp);
+              const here = i === 0 ? p2 < b : p2 >= a; // the caret sits on the line being typed
+              return (
+                <div key={i} style={{ whiteSpace: "nowrap" }}>
+                  {shown}
+                  <span style={{ display: "inline-block", width: 0, height: 0, position: "relative" }}>
+                    {p1 > 0.99 && caret && here ? (
+                      <span style={{ position: "absolute", left: 3, top: -22, width: 13, height: 24, background: UI.coral, opacity: 0.9 }} />
+                    ) : null}
+                  </span>
+                  <span style={{ opacity: 0 }}>{line.slice(shown.length)}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -422,8 +460,8 @@ const McpPane: React.FC<{ t: number; flash: number }> = ({ t, flash }) => {
 };
 
 // ---------------------------------------------------------------- the scene
-/** His words under his chin (chin about 1110 at the push), one line, white. */
-const CAPTION_Y = 1160;
+/** His words under his chin (chin about 990, about 1005 at the push), one line, white. */
+const CAPTION_Y = 1046;
 
 export const LogoBridge: React.FC<FxProps> = ({ t }) => {
   const z = zoomAt(t);
@@ -431,11 +469,11 @@ export const LogoBridge: React.FC<FxProps> = ({ t }) => {
   const { path, mid, c, r } = traceAt(t);
   const L = path.L;
   // The line is laid from both rims toward the crossing point, already running on the first frame.
-  const lay = ez(t, -8, 6, EASE.inOut);
+  const lay = ez(t, -16, -2, EASE.inOut);
   const ranges: [number, number][] =
     lay > 0.999 ? [[0, L]] : [[0, mid * lay], [L - (L - mid) * lay, L]];
   const { bumps, speakC: talkC, speakR: talkR } = bumpsAt(t, L, mid);
-  const hum = 1.2 + 2.2 * voiceEnv("hook", t);
+  const hum = 1.2 + 2.2 * voiceEnv(CLIP, t + OFFSET);
   const flash = Math.max(0, ...BEATS.map((at) => ez(t, at - 5, at, EASE.enter) * (1 - ez(t, at, at + 12, EASE.decel))));
   const inC = ez(t, -8, 2, EASE.enter);
   const inR = ez(t, -5, 5, EASE.enter);
@@ -444,7 +482,14 @@ export const LogoBridge: React.FC<FxProps> = ({ t }) => {
   return (
     <AbsoluteFill style={{ background: UI.bg, overflow: "hidden" }}>
       <AbsoluteFill style={{ transform: cam(1), transformOrigin: `${ANCHOR.x}px ${ANCHOR.y}px` }}>
-        <Clip name="hook" />
+        {t > CLIP_END ? (
+          // the clip has run out: a nested Sequence pins its time at CLIP_END, so the footage holds that frame
+          <Sequence from={t - CLIP_END} layout="none">
+            <Clip name={CLIP} offset={OFFSET} />
+          </Sequence>
+        ) : (
+          <Clip name={CLIP} offset={OFFSET} />
+        )}
       </AbsoluteFill>
       <AbsoluteFill style={{ background: "radial-gradient(ellipse at 54% 36%, rgba(0,0,0,0) 52%, rgba(0,0,0,0.26) 100%)" }} />
       <AbsoluteFill style={{ transform: cam(NEAR), transformOrigin: `${ANCHOR.x}px ${ANCHOR.y}px` }}>
@@ -471,7 +516,7 @@ export const LogoBridge: React.FC<FxProps> = ({ t }) => {
           </>
         )}
       </AbsoluteFill>
-      <Caption name="hook" t={t} y={CAPTION_Y} size={62} chunk={3} maxWidth={SAFE_IG.w - 40} />
+      <Caption name={CLIP} t={t} offset={OFFSET} y={CAPTION_Y} size={62} chunk={3} maxWidth={SAFE_IG.w - 40} />
     </AbsoluteFill>
   );
 };
@@ -480,7 +525,7 @@ export const logobridge: FxDef = {
   id: "logobridge",
   command: "/logo-bridge",
   menu: "Two logos, one line between them",
-  clip: "hook",
+  clip: CLIP,
   Comp: LogoBridge,
-  thumbT: [15, 25, 33],
+  thumbT: [17, 26, 31],
 };
