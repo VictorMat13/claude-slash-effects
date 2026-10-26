@@ -152,7 +152,10 @@ const hash = (i: number, j: number, k: number) => {
   const x = Math.sin(i * 127.1 + j * 311.7 + k * 74.7) * 43758.5453;
   return x - Math.floor(x);
 };
-export const Dither: React.FC<{ t: number; w?: number; h?: number; pitch?: number; style?: React.CSSProperties }> = ({ t, w = 700, h = 1240, pitch = 10, style }) => {
+export const Dither: React.FC<{ t: number; w?: number; h?: number; pitch?: number; build?: number; style?: React.CSSProperties }> = ({ t, w = 700, h = 1240, pitch = 10, build = 1, style }) => {
+  // build 0..1: the field fills in (more dots, brighter) as Claude "edits", so the reveal is a ramp rather than a pop.
+  const gate = 0.7 + (1 - build) * 1.1;
+  const bright = 0.5 + 1.3 * build; // ends 1.8x the old level: the halftone has to read as a loading field, like the reference reel
   const cols = Math.ceil(w / pitch) + 1;
   const rows = Math.ceil(h / pitch) + 1;
   const dots: React.ReactNode[] = [];
@@ -162,10 +165,10 @@ export const Dither: React.FC<{ t: number; w?: number; h?: number; pitch?: numbe
       const b = hash(i, j, 2);
       const phase = hash(i, j, 3) * 6.283;
       const pulse = 0.5 + 0.5 * Math.sin(t * (0.35 + b * 0.5) + phase);
-      const r = (0.5 + a * 1.5) * (0.6 + 0.4 * pulse);
-      if (r < 0.7) continue;
+      const r = (0.5 + a * 1.5) * (0.6 + 0.4 * pulse) * (0.8 + 0.4 * build);
+      if (r < gate) continue;
       const coral = a > 0.62;
-      const op = (0.12 + 0.3 * pulse) * (coral ? 1 : 0.6);
+      const op = (0.12 + 0.3 * pulse) * (coral ? 1 : 0.6) * bright;
       dots.push(
         <circle
           key={`${i}-${j}`}

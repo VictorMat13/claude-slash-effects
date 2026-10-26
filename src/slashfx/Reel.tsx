@@ -3,7 +3,7 @@
 // below, both on the same eased travel, so the switch between prompts is one continuous scroll (no hard cuts).
 import React from "react";
 import { AbsoluteFill, Freeze, Sequence, useCurrentFrame } from "remotion";
-import { Cycle, sheetY } from "./Cycle";
+import { Cycle, sheetOpacity, sheetY } from "./Cycle";
 import { Ending } from "./ending/Ending";
 import { FX } from "./fx";
 import { CYCLE, ENDING_LEN, ENDING_START, FONT_UI, SCROLL, TOTAL, UI, WHITEGRID } from "./theme";
@@ -15,8 +15,9 @@ export const SLASHFX_DURATION = TOTAL;
 const ScrollIn: React.FC<{ lead: number; children: React.ReactNode }> = ({ lead, children }) => {
   const f = useCurrentFrame() - lead;
   const y = f < 0 ? sheetY(f, lead, Number.MAX_SAFE_INTEGER) : 0;
+  const op = sheetOpacity(f, lead);
   return (
-    <AbsoluteFill style={{ background: WHITEGRID ? "transparent" : UI.bg, transform: `translateY(${y}px)` }}>
+    <AbsoluteFill style={{ background: WHITEGRID ? "transparent" : UI.bg, transform: `translateY(${y}px)`, opacity: op }}>
       {WHITEGRID ? <WhiteGrid f={f + lead} /> : null}
       {children}
     </AbsoluteFill>

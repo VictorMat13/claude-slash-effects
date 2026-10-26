@@ -147,14 +147,17 @@ export const CYCLE = {
   dither: 24,
   /** Effect t = frame - resolve. */
   resolve: 34,
-  resolveEnd: 37,
-  push: 43,
+  resolveEnd: 39, // smoothness pass 2026-10-26: 5-frame crossfade out of the dither (was 37)
+  push: 40, // smoothness pass: the card grows over 8 frames with a bell ease, t 6..14 (was 43, five frames)
   full: 48,
 } as const;
 export const FX_START = CYCLE.resolve;
 /** Frames the reel takes to scroll from one prompt to the next (Victor, 16:50: smooth switching, no hard cuts). The
  *  outgoing full-screen effect slides up while the next app screen slides in from below, one eased sheet. */
-export const SCROLL = 10;
+export const SCROLL = 12;
+/** Smoothness pass (Victor, 2026-10-26, reference Detu9zAKHHa): the switch is a short slide plus a fade, not a full-height whip.
+ *  The incoming sheet rises SCROLL_TRAVEL px while fading in over the outgoing one, which eases up by the same amount. */
+export const SCROLL_TRAVEL = 420;
 export const CYCLES = 6;
 export const ENDING_START = CYCLES * CYCLE.len; // 456
 export const ENDING_LEN = 144;

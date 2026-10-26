@@ -5,7 +5,7 @@ import { AbsoluteFill, Sequence, useCurrentFrame } from "remotion";
 import { AppLayer, Composer, Header, Keyboard, ReplyBar, SentMessage, SlashMenu, SparkLine, TYPING } from "./app/Phone";
 import { CLIPS } from "./data/clips";
 import { Dither } from "./kit";
-import { CARD, CLAMP, CYCLE, EASE, FX_START, H, SCROLL, UI, W, WHITEGRID, ez, lerp, type FxDef } from "./theme";
+import { CARD, CLAMP, CYCLE, EASE, FX_START, H, SCROLL, SCROLL_TRAVEL, UI, W, WHITEGRID, ez, lerp, type FxDef } from "./theme";
 import { WhiteGrid } from "./backdrop";
 import { interpolate } from "remotion";
 
@@ -33,9 +33,12 @@ export const FxHost: React.FC<{ fx: FxDef; stage: "card" | "full" }> = ({ fx, st
   return <Comp t={t} stage={stage} />;
 };
 
-/** Vertical offset of a sheet that scrolls in over the first `lead` frames (f < 0) and out over the last SCROLL frames. */
+/** Vertical offset of a sheet that slides in over the first `lead` frames (f < 0) and out over the last SCROLL frames.
+ *  Smoothness pass: a SCROLL_TRAVEL px slide with a bell ease instead of a full-height whip; the fade does the rest. */
 export const sheetY = (f: number, lead: number, len: number) =>
-  f < 0 ? H * (1 - ez(f, -lead, 0, EASE.travel)) : -H * ez(f, len - SCROLL, len, EASE.travel);
+  f < 0 ? SCROLL_TRAVEL * (1 - ez(f, -lead, 0, EASE.inOut)) : -SCROLL_TRAVEL * ez(f, len - SCROLL, len, EASE.inOut);
+/** Opacity of an incoming sheet: fades in over its lead so it crossfades over the outgoing one (which stays opaque). */
+export const sheetOpacity = (f: number, lead: number) => (f < 0 ? ez(f, -lead, 0, EASE.inOut) : 1);
 
 export const Cycle: React.FC<{ fx: FxDef; lead?: number }> = ({ fx, lead = 0 }) => {
   const f = useCurrentFrame() - lead;
@@ -46,8 +49,10 @@ export const Cycle: React.FC<{ fx: FxDef; lead?: number }> = ({ fx, lead = 0 }) 
   const sent = ez(f, CYCLE.sentStart, CYCLE.sentEnd, EASE.travel);
   const sparkP = ez(f, CYCLE.spark, CYCLE.spark + 5);
   const cardP = ez(f, CYCLE.dither, CYCLE.dither + 5);
+  // The halftone builds up over the wait (dots brighten and grow), then crossfades into the result: no pop.
+  const build = ez(f, CYCLE.dither, CYCLE.resolve, EASE.inOut);
   const resolved = ez(f, CYCLE.resolve, CYCLE.resolveEnd, EASE.inOut);
-  const push = ez(f, CYCLE.push, CYCLE.full, EASE.travel);
+  const push = ez(f, CYCLE.push, CYCLE.full, EASE.inOut);
   const stage = f >= CYCLE.full ? "full" : "card";
   const rx = lerp(CARD.x, 0, push);
   const ry = lerp(CARD.y, 0, push);
@@ -58,8 +63,9 @@ export const Cycle: React.FC<{ fx: FxDef; lead?: number }> = ({ fx, lead = 0 }) 
   const appScale = interpolate(f, [0, CYCLE.push], [1, 1.012], CLAMP) * (1 + 0.08 * push);
   const caret = Math.floor(f / 11) % 2 === 0 || f < 5;
   const sheet = sheetY(f, lead, CYCLE.len);
+  const sheetOp = sheetOpacity(f, lead);
   return (
-    <AbsoluteFill style={{ background: WHITEGRID ? "transparent" : UI.bg, overflow: "hidden", transform: `translateY(${sheet}px)` }}>
+    <AbsoluteFill style={{ background: WHITEGRID ? "transparent" : UI.bg, overflow: "hidden", transform: `translateY(${sheet}px)`, opacity: sheetOp }}>
       {WHITEGRID ? <WhiteGrid f={f + lead} /> : null}
       <AppLayer zoom={appScale} opacity={1 - push}>
         <Header showCompose={sent < 0.5} />
@@ -101,7 +107,7 @@ export const Cycle: React.FC<{ fx: FxDef; lead?: number }> = ({ fx, lead = 0 }) 
               </Sequence>
             </div>
           ) : null}
-          {resolved < 1 ? <Dither t={f} w={Math.ceil(rw)} h={Math.ceil(rh)} style={{ opacity: 1 - resolved, transform: `scale(${1 + resolved * 0.08})` }} /> : null}
+          {resolved < 1 ? <Dither t={f} build={build} w={Math.ceil(rw)} h={Math.ceil(rh)} style={{ opacity: 1 - resolved, transform: `scale(${1 + resolved * 0.08})` }} /> : null}
         </div>
       ) : null}
     </AbsoluteFill>
