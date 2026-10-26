@@ -1,0 +1,7 @@
+node_modules/
+out/
+.DS_Store
+public/slashfx/clips/*.mp4
+public/slashfx/thumbs/*.png
+public/resolve/*
+!public/resolve/README.md

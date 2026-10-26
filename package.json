@@ -1,0 +1,24 @@
+{
+  "name": "claude-slash-effects",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Six slash-command video effects for Claude Code, rendered with Remotion in a CRT Scope look. Source of the 'prompt video' reel by Victor Matevski.",
+  "scripts": {
+    "studio": "remotion studio src/slashfx/entry.tsx",
+    "render": "remotion render src/slashfx/entry.tsx SlashFx out/SlashFx.mp4 --concurrency=1",
+    "still": "remotion still src/slashfx/entry.tsx SlashFxProbe out/probe.png --frame 20 --props '{\"fx\":\"matchcut\",\"stage\":\"full\"}'",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.482",
+    "@remotion/google-fonts": "4.0.482",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.482"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3"
+  }
+}
