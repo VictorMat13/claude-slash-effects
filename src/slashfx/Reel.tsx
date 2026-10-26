@@ -6,7 +6,8 @@ import { AbsoluteFill, Freeze, Sequence, useCurrentFrame } from "remotion";
 import { Cycle, sheetY } from "./Cycle";
 import { Ending } from "./ending/Ending";
 import { FX } from "./fx";
-import { CYCLE, ENDING_LEN, ENDING_START, FONT_UI, SCROLL, TOTAL, UI } from "./theme";
+import { CYCLE, ENDING_LEN, ENDING_START, FONT_UI, SCROLL, TOTAL, UI, WHITEGRID } from "./theme";
+import { WhiteGrid } from "./backdrop";
 
 export const SLASHFX_DURATION = TOTAL;
 
@@ -14,7 +15,12 @@ export const SLASHFX_DURATION = TOTAL;
 const ScrollIn: React.FC<{ lead: number; children: React.ReactNode }> = ({ lead, children }) => {
   const f = useCurrentFrame() - lead;
   const y = f < 0 ? sheetY(f, lead, Number.MAX_SAFE_INTEGER) : 0;
-  return <AbsoluteFill style={{ background: UI.bg, transform: `translateY(${y}px)` }}>{children}</AbsoluteFill>;
+  return (
+    <AbsoluteFill style={{ background: WHITEGRID ? "transparent" : UI.bg, transform: `translateY(${y}px)` }}>
+      {WHITEGRID ? <WhiteGrid f={f + lead} /> : null}
+      {children}
+    </AbsoluteFill>
+  );
 };
 
 /** While the ending sheet scrolls in it shows the ending's first frame (frozen), then the ending runs from its frame 0. */
@@ -34,8 +40,8 @@ const EndingWithLead: React.FC<{ lead: number }> = ({ lead }) => {
   );
 };
 
-export const Reel: React.FC = () => (
-  <AbsoluteFill style={{ background: UI.bg, fontFamily: FONT_UI }}>
+const ReelBody: React.FC = () => (
+  <AbsoluteFill style={{ background: WHITEGRID ? "#E9E8E7" : UI.bg, fontFamily: FONT_UI }}>
     {FX.map((fx, k) => {
       const lead = k === 0 ? 0 : SCROLL;
       return (
@@ -51,3 +57,7 @@ export const Reel: React.FC = () => (
     </Sequence>
   </AbsoluteFill>
 );
+
+/** The reel. With REMOTION_SLASHFX_BG=whitegrid only the ground behind the app window is the white grid paper; the app,
+ *  the effects and the footage are untouched (Victor, 2026-10-26 00:15: "just the background behind the card"). */
+export const Reel: React.FC = () => <ReelBody />;

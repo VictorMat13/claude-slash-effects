@@ -2,7 +2,7 @@
 // 720 px wide space (see dispatch/REFERENCE-STUDY.md for every measurement) and mapped into the Instagram safe rect by
 // AppLayer (APP.scale at APP.left, APP.top: reference x 0..720 is x 100..980, reference y 0..APP.refH is y 290..1520).
 import React from "react";
-import { APP, FONT_UI, SAFE_IG, UI } from "../theme";
+import { APP, FONT_UI, SAFE_IG, UI, WHITEGRID } from "../theme";
 import { Spark } from "../kit";
 import { Img, staticFile } from "remotion";
 
@@ -26,7 +26,7 @@ export const AppLayer: React.FC<{ children?: React.ReactNode; zoom?: number; opa
   opacity = 1,
   style,
 }) => (
-  <div style={{ position: "absolute", left: APP.left, top: APP.top, width: SAFE_IG.w, height: SAFE_IG.h, overflow: "hidden" }}>
+  <div style={{ position: "absolute", left: APP.left, top: APP.top, width: SAFE_IG.w, height: SAFE_IG.h, overflow: "hidden", background: UI.bg, borderRadius: WHITEGRID ? 40 : 0, boxShadow: WHITEGRID ? "0 0 0 3px rgba(20,14,12,0.9), 0 30px 80px rgba(20,14,12,0.28)" : "none" }}>
     <div style={{ position: "absolute", inset: 0, transform: `scale(${zoom})`, transformOrigin: "50% 100%", opacity }}>
       <div
         style={{
@@ -132,7 +132,7 @@ export const Composer: React.FC<{
             <Img src={staticFile(thumb)} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             <div style={{ position: "absolute", left: 14, bottom: 14 }}><PlayGlyph size={16} /></div>
           </div>
-          <div style={{ position: "absolute", left: 150 - 22, top: 8, width: 30, height: 30, borderRadius: 15, background: "#1C1A1C", boxShadow: "0 0 0 2px rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ position: "absolute", left: 150 - 22, top: 8, width: 30, height: 30, borderRadius: 15, background: UI.badge, boxShadow: `0 0 0 2px ${UI.badgeRing}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <CloseGlyph size={12} />
           </div>
         </div>
@@ -212,7 +212,7 @@ export const Keyboard: React.FC<{
         borderRadius: 10,
         background: pressed ? UI.keyPop : UI.key,
         boxShadow: "0 1px 0 rgba(0,0,0,0.35)",
-        color: UI.white,
+        color: UI.keyInk,
         fontSize: 30,
         display: "flex",
         alignItems: "center",
@@ -227,9 +227,9 @@ export const Keyboard: React.FC<{
     <div style={{ position: "absolute", left: 0, top: TYPING.keyboardTop + y, width: 720, height: APP.refH - TYPING.keyboardTop, background: UI.tray, opacity, overflow: "hidden" }}>
       {/* suggestion strip */}
       <div style={{ position: "absolute", left: 0, top: 0, width: 720, height: 82 }}>
-        <div style={{ position: "absolute", left: 240, top: 24, width: 1, height: 34, background: "rgba(255,255,255,0.14)" }} />
-        <div style={{ position: "absolute", left: 480, top: 24, width: 1, height: 34, background: "rgba(255,255,255,0.14)" }} />
-        <div style={{ position: "absolute", left: 0, top: 0, width: 240, height: 82, display: "flex", alignItems: "center", justifyContent: "center", color: "#D4D2D6", fontSize: 22, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", padding: "0 12px" }}>
+        <div style={{ position: "absolute", left: 240, top: 24, width: 1, height: 34, background: UI.trayLine }} />
+        <div style={{ position: "absolute", left: 480, top: 24, width: 1, height: 34, background: UI.trayLine }} />
+        <div style={{ position: "absolute", left: 0, top: 0, width: 240, height: 82, display: "flex", alignItems: "center", justifyContent: "center", color: UI.trayText, fontSize: 22, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", padding: "0 12px" }}>
           {typedLetters ? `“${typedLetters}` : "“"}
         </div>
       </div>
@@ -244,7 +244,7 @@ export const Keyboard: React.FC<{
       </div>
       {/* bottom row, only its top shows above the safe bottom */}
       <div style={{ position: "absolute", left: 8, top: ROW_TOP[3], width: 97, height: KEY_H, borderRadius: 10, background: UI.key }} />
-      <div style={{ position: "absolute", left: 115, top: ROW_TOP[3], width: 491, height: KEY_H, borderRadius: 10, background: "#4A474D" }} />
+      <div style={{ position: "absolute", left: 115, top: ROW_TOP[3], width: 491, height: KEY_H, borderRadius: 10, background: UI.space }} />
       <div style={{ position: "absolute", left: 615, top: ROW_TOP[3], width: 98, height: KEY_H, borderRadius: 10, background: UI.key }} />
       {pop ? (
         <div
@@ -257,7 +257,7 @@ export const Keyboard: React.FC<{
             borderRadius: 14,
             background: UI.keyPop,
             boxShadow: "0 6px 18px rgba(0,0,0,0.45)",
-            color: UI.white,
+            color: UI.keyInk,
             fontSize: 48,
             display: "flex",
             justifyContent: "center",
@@ -279,7 +279,7 @@ export const ReplyBar: React.FC<{ y?: number; opacity?: number }> = ({ y = 0, op
     <div style={{ position: "absolute", left: 76, top: 28, fontSize: 27, color: UI.muted }}>Reply to Claude...</div>
     <div style={{ position: "absolute", left: 566, top: 31 }}><MicIcon size={30} color={UI.text} /></div>
     <div style={{ position: "absolute", left: 618, top: 17, width: 57, height: 57, borderRadius: 29, background: UI.replySend, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <ArrowUpIcon size={26} color={UI.white} />
+      <ArrowUpIcon size={26} color={UI.replyInk} />
     </div>
   </div>
 );

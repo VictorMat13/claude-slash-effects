@@ -2,7 +2,7 @@
 // card, and full screen) and which of our six effects each grid cell plays. Reference: f0166 to f0223 (16.5 s to 22.3 s).
 import { CLIPS, type ClipName } from "../data/clips";
 import { FX } from "../fx";
-import { CARD, ENDING_LEN, FPS, KEYWORD, PAYLOAD, SAFE_IG, W } from "../theme";
+import { UI, CARD, ENDING_LEN, FPS, KEYWORD, PAYLOAD, SAFE_IG, W } from "../theme";
 
 /** The timeline was specced at 30 fps (agent-END.md); every frame is derived from those numbers at the reel's FPS. */
 export const at = (f30: number) => Math.round((f30 * FPS) / 30);
@@ -45,7 +45,7 @@ export const HEADLINE = `Comment “${KEYWORD}”`;
 export const PILL = PAYLOAD.startsWith("the prompt") ? "for every effect’s prompt" : `for ${PAYLOAD}`;
 
 /** Full-screen background behind the grid, sampled from the reference (f0192, f0200, f0222: #130D11). */
-export const FULL_BG = "#130D11";
+export const FULL_BG = UI.fullBg;
 
 // ---------------------------------------------------------------- what the composer shows (the ending's own key times)
 export const typedAt = (f: number) => {

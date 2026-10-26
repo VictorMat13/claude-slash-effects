@@ -6,7 +6,8 @@ import React from "react";
 import { AbsoluteFill, interpolate, interpolateColors, useCurrentFrame } from "remotion";
 import { AppLayer, Composer, Header, HomeGreeting, Keyboard, ReplyBar, SentMessage, SlashMenu, SparkLine, TYPING } from "../app/Phone";
 import { Dither, INTER } from "../kit";
-import { APP, CARD, CLAMP, EASE, FPS, GREETING, H, NAME, UI, W, ez, lerp } from "../theme";
+import { APP, CARD, CLAMP, EASE, FPS, GREETING, H, NAME, UI, W, ez, lerp, WHITEGRID } from "../theme";
+import { WhiteGrid } from "../backdrop";
 import { FxCell, WordCell } from "./cells";
 import {
   CARD_K,
@@ -120,7 +121,8 @@ export const Ending: React.FC = () => {
   const cellR = lerp(6 * CARD_K, 10 * CTA_K, push);
 
   return (
-    <AbsoluteFill style={{ background: UI.bg, overflow: "hidden" }}>
+    <AbsoluteFill style={{ background: WHITEGRID ? "transparent" : UI.bg, overflow: "hidden" }}>
+      {WHITEGRID ? <WhiteGrid f={f} /> : null}
       {push < 1 ? (
         <AppLayer zoom={appScale} opacity={1 - push}>
           <Header />
@@ -161,7 +163,7 @@ export const Ending: React.FC = () => {
             <div style={{ position: "absolute", inset: 0, opacity: resolved }}>
               {titleOut < 1 ? (
                 <>
-                  <Line y={lerp(210 * CARD_K, CTA.headY, push)} size={lerp(44 * CARD_K, CTA.headSize, push)} weight={700} color={UI.white} opacity={1 - titleOut} dy={-14 * CTA_K * titleOut}>
+                  <Line y={lerp(210 * CARD_K, CTA.headY, push)} size={lerp(44 * CARD_K, CTA.headSize, push)} weight={700} color={UI.headline} opacity={1 - titleOut} dy={-14 * CTA_K * titleOut}>
                     {CARD_TITLE}
                   </Line>
                   <Line y={lerp(265 * CARD_K, CTA.subY, push)} size={lerp(22 * CARD_K, CTA.subSize, push)} weight={500} color={UI.coral} opacity={1 - titleOut} dy={-14 * CTA_K * titleOut}>
@@ -171,7 +173,7 @@ export const Ending: React.FC = () => {
               ) : null}
               {ctaIn > 0 ? (
                 <>
-                  <Line y={CTA.headY} size={CTA.headSize} weight={800} color={UI.white} opacity={ctaIn} dy={18 * CTA_K * (1 - ctaIn)}>
+                  <Line y={CTA.headY} size={CTA.headSize} weight={800} color={UI.headline} opacity={ctaIn} dy={18 * CTA_K * (1 - ctaIn)}>
                     {HEADLINE}
                   </Line>
                   <div

@@ -172,7 +172,7 @@ export const Dither: React.FC<{ t: number; w?: number; h?: number; pitch?: numbe
           cx={i * pitch + (hash(i, j, 4) - 0.5) * pitch * 0.35}
           cy={j * pitch + (hash(i, j, 5) - 0.5) * pitch * 0.35}
           r={r}
-          fill={coral ? "#D97757" : "#E8E2DC"}
+          fill={coral ? UI.coral : UI.ditherDot}
           opacity={op}
         />,
       );

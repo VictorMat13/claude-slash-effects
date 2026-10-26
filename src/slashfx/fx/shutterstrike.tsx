@@ -34,7 +34,7 @@ const FEATHER = `linear-gradient(to right, transparent 0px, #000 ${FEATHER_PX}px
  * s >= 1 fills the half edge to edge (screenpush); s < 1 shows his whole head and fills the sides with the blurred
  * footage (shutterstrike).
  */
-export const LowerClip: React.FC<{ name: ClipName; t: number; s: number; tx: number; ty: number }> = ({ name, t, s, tx, ty }) => {
+export const LowerClip: React.FC<{ name: ClipName; t: number; s: number; tx: number; ty: number; offset?: number }> = ({ name, t, s, tx, ty, offset = 0 }) => {
   const push = 0.025 * Math.min(1, Math.max(0, t) / 72);
   const layer = (scale: number, style?: React.CSSProperties) => (
     <div
@@ -49,7 +49,7 @@ export const LowerClip: React.FC<{ name: ClipName; t: number; s: number; tx: num
         ...style,
       }}
     >
-      <Clip name={name} />
+      <Clip name={name} offset={offset} />
     </div>
   );
   return (

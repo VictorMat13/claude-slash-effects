@@ -97,3 +97,31 @@ export const LOGOS = {
   resolve: "slashfx/davinci-resolve-icon.svg",
   blackmagic: "slashfx/blackmagic-design-logo-official.svg",
 } as const;
+
+/** Verbatim fragments of the Y.M.Cinema paragraph (ARTICLES[0]) for /page-flip. */
+export const MANUAL = {
+  name: "DaVinci Resolve 21.1 Reference Manual",
+  pages: "4,300",
+  page: "4,318",
+  section: "Using DaVinci Resolve with AI Assistants",
+  source: "Y.M.Cinema Magazine, September 17, 2026",
+} as const;
+/** Verbatim from PTTL.gr (ARTICLES[1]): the bridge between the assistants and Resolve, for /logo-bridge. */
+export const MCP = { phrase: "MCP server", expansion: "Model Context Protocol", source: "PTTL.gr, September 11, 2026" } as const;
+/** Real Resolve track names (the Edit page), for /timeline-scrub. */
+export const TRACK_NAMES = ["V2", "V1", "A1"] as const;
+
+/** Verbatim headlines (og:title of each page, fetched 2026-10-25), with publication and date, for /headline-feed. */
+export const HEADLINES = [
+  { text: "DaVinci Resolve 21.1 opens editing workflows to AI assistants through MCP", source: "PTTL.gr", date: "September 11, 2026" },
+  { text: "DaVinci Resolve 21.1 Introduces Claude and ChatGPT Assistant", source: "VP Land", date: "September 9, 2026" },
+  { text: "Blackmagic Design Adds Claude and ChatGPT to DaVinci Resolve", source: "StreamingMeme", date: "September 14, 2026" },
+  { text: "Resolve 21.1 Adds MCP and Presets for Automation", source: "DIGITAL PRODUCTION", date: "September 8, 2026" },
+  { text: "DaVinci Resolve 21.1 Uses MCP to Let AI Assistants Control the Edit", source: "Y.M.Cinema Magazine", date: "September 17, 2026" },
+  { text: "Blackmagic Design releases DaVinci Resolve 21.1", source: "CG Channel", date: "September 2026" },
+  { text: "Claude in DaVinci Resolve 21.1, and in Premiere Pro?", source: "Black Hat Editor Tools", date: "October 2, 2026" },
+] as const;
+/** Verbatim from PTTL.gr (ARTICLES[1]): the three assistants Blackmagic names, for /two-tubes. */
+export const ASSISTANTS = ["Claude", "Claude Code", "ChatGPT Codex"] as const;
+/** Verbatim job list from ARTICLES[3] (PTTL.gr): what Blackmagic lists the assistants can do. For /focus-pull, /two-tubes. */
+export const JOBS = ["project analysis", "media organization", "settings changes", "batch rendering", "highlight-edit creation from long-form video", "removal of unwanted clips", "rendering of deliverables"] as const;

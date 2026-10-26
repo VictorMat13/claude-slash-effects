@@ -1,0 +1,7 @@
+Build a 1080x1920, 24 fps Remotion composition called ColorDial using the shared kit. My clip $ARGUMENTS fills the frame with my face centered. Never zoom the footage past 1.07.
+
+Under my chin, draw a see-through CRT pane in the kit style. Inside it, a colour wheel cut from a real screenshot of the software's colour page, pushed in, with the rest of the wheel panel dim and blurred behind it. Turn the kit CRT's black into glass over a blurred dark backdrop so my footage shows through, and darken the glass along its top edge so my neck does not read as a pale blob. No bloom.
+
+Open tight on the pane, tilted back 6 degrees, with my footage flat (saturation 0.6) and soft. The camera pulls out: the pane settles, the wheel slides to the centre, my footage racks from 1.07 to 1.035 into focus. On each beat I mark in my notes the dial turns over 6 frames, eased, set off by a coral packet reaching the wheel's foot along the live trace. As it turns, grade my footage live from the dial angle with a CSS filter: hue-rotate within plus or minus 8 degrees, saturation from 0.6 to 1.3, a touch of sepia on the warm side only, so the look goes flat, then cool, then rich, and ends warm and rich. My voice is the green wave at the end of the trace.
+
+Camera: one timeline that holds tight, pulls out, holds, with float and drift. My spoken words as the caption in one line above the pane. 2 seconds, then hold the last frame.

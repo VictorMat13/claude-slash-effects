@@ -6,18 +6,28 @@ import type { ClipName } from "./data/clips";
 
 export const W = 1080;
 export const H = 1920;
-export const FPS = 24; // Victor, 2026-10-25 14:30: 24 fps
+/** Variant switches (Victor, 2026-10-25 23:00: "speed it up to 1.1 ... white background ... no music"). Set at render time:
+ *  REMOTION_SLASHFX_LIGHT=1 for the light (white) app UI, REMOTION_SLASHFX_SPEED=1.1 to play every frame 1.1x faster.
+ *  Timing stays in frames; a faster composition fps speeds up the UI, the effects and the footage together. */
+export const LIGHT = process.env.REMOTION_SLASHFX_LIGHT === "1";
+export const SPEED = Number(process.env.REMOTION_SLASHFX_SPEED || 1);
+/** REMOTION_SLASHFX_BG=whitegrid: the white-grid CRT backdrop (backdrop.tsx) under the dark app, the whole reel in one tube. */
+export const WHITEGRID = process.env.REMOTION_SLASHFX_BG === "whitegrid";
+export const FPS = 24 * SPEED; // Victor, 2026-10-25 14:30: 24 fps (x SPEED for the fast variant)
 /** Reference pixels (720 wide) to output pixels (1080 wide). */
 export const R = 1.5;
 
 /** The comment keyword and what commenters get. Placeholder until Victor answers (BRIEF.md question 1). */
-export const KEYWORD = "EFFECTS";
+/** Which set of six effects the reel plays (Victor, 2026-10-26 00:30: three more videos). REMOTION_SLASHFX_SET=2|3|4. */
+export const SET = Number(process.env.REMOTION_SLASHFX_SET || 1);
+const KEYWORDS: Record<number, string> = { 1: "EFFECTS", 2: "PROMPTS", 3: "SLASH", 4: "COMMANDS" };
+export const KEYWORD = KEYWORDS[SET] ?? "EFFECTS";
 export const PAYLOAD = "the prompt for every effect";
 export const NAME = "Victor";
 export const GREETING = "Evening";
 
 /** Colors sampled from the reference frames (see dispatch/REFERENCE-STUDY.md). */
-export const UI = {
+const UI_DARK = {
   bg: "#1A171A",
   panel: "#242125",
   menuPanel: "#2F2C2D",
@@ -43,7 +53,49 @@ export const UI = {
   screen: "#101217",
   screenInk: "#ECE9E2",
   screenLine: "rgba(255,255,255,0.07)",
+  /** keyboard tray details and the thumb badge */
+  trayLine: "rgba(255,255,255,0.14)",
+  trayText: "#D4D2D6",
+  space: "#4A474D",
+  badge: "#1C1A1C",
+  badgeRing: "rgba(255,255,255,0.08)",
+  ditherDot: "#E8E2DC",
+  fullBg: "#130D11",
+  keyInk: "#FFFFFF",
+  headline: "#FFFFFF",
+  replyInk: "#FFFFFF",
 } as const;
+/** The Claude iOS app in light mode (sampled from the app, 2026-10-25 23:05). CRT screens stay dark. */
+const UI_LIGHT = {
+  ...UI_DARK,
+  bg: "#FAF9F5",
+  panel: "#ECE9E1",
+  menuPanel: "#E6E3DA",
+  line: "rgba(0,0,0,0.08)",
+  seg: "#E6E3DA",
+  segOn: "#FFFFFF",
+  tray: "#C9CBD1",
+  key: "#FFFFFF",
+  keyPop: "#FFFFFF",
+  text: "#1C1A17",
+  muted: "#7B7873",
+  pill: "#F5E6DD",
+  replyBar: "#ECE9E1",
+  replySend: "#DEDBD3",
+  dither: "#ECEAE2",
+  trayLine: "rgba(0,0,0,0.15)",
+  trayText: "#3A3A3C",
+  space: "#FFFFFF",
+  badge: "#FFFFFF",
+  badgeRing: "rgba(0,0,0,0.10)",
+  ditherDot: "#8C8780",
+  fullBg: "#FAF9F5",
+  keyInk: "#1C1A17",
+  headline: "#1C1A17",
+  replyInk: "#1C1A17",
+} as const;
+type UiTokens = { readonly [K in keyof typeof UI_DARK]: string };
+export const UI: UiTokens = LIGHT ? UI_LIGHT : UI_DARK;
 
 export const FONT_UI = `-apple-system, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif`;
 
@@ -67,14 +119,17 @@ export const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
  *  The feed shows a 4:5 crop (top and bottom 285 px hidden); the Reels UI covers the bottom ~400 px and the right edge.
  *  Every piece of CONTENT (app chrome, text, panes, boxes, graphs, prints, the locked word, the CTA) stays inside
  *  SAFE_IG. Footage, grids and screens may bleed to the frame edge. */
-export const IG = { left: 100, right: 100, top: 290, bottom: 400 } as const;
-export const SAFE_IG = { x0: IG.left, x1: W - IG.right, y0: IG.top, y1: H - IG.bottom, w: W - IG.left - IG.right, h: H - IG.top - IG.bottom } as const; // 100..980 x 290..1520
+export const IG = { left: 60, right: 80, top: 270, bottom: 340 } as const; // Victor, 2026-10-26 00:50: "safe zone is way too far out, zoom in on the card"; was 100/100/290/400
+export const SAFE_IG = { x0: IG.left, x1: W - IG.right, y0: IG.top, y1: H - IG.bottom, w: W - IG.left - IG.right, h: H - IG.top - IG.bottom } as const; // 60..1000 x 270..1580
 /** Same rect in the older {top, side, bottom} shape the effects read. */
 export const SAFE = { top: IG.top, side: IG.left, bottom: IG.bottom } as const;
 /** The app UI (720 x 1280 reference space) is scaled to the safe width and pinned to the safe top. The typing state
  *  lifts the slash menu, composer and keyboard by APP.lift reference px so the keyboard ends on the safe bottom;
  *  the sent state ends its reply bar there too (reference rows above APP.refH are visible, 1006 ref px). */
-export const APP = { scale: SAFE_IG.w / 720, left: SAFE_IG.x0, top: SAFE_IG.y0, refH: Math.round(SAFE_IG.h / (SAFE_IG.w / 720)), lift: 274 } as const;
+const APP_SCALE = SAFE_IG.w / 720;
+const APP_REF_H = Math.round(SAFE_IG.h / APP_SCALE);
+/** lift = how far the typing group moves up so the keyboard (ref bottom 1280) ends on the safe bottom. */
+export const APP = { scale: APP_SCALE, left: SAFE_IG.x0, top: SAFE_IG.y0, refH: APP_REF_H, lift: 1280 - APP_REF_H } as const;
 
 /** One command cycle, in frames (24 fps). Six cycles, then the ending. */
 export const CYCLE = {

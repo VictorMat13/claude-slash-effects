@@ -5,7 +5,8 @@ import { AbsoluteFill, Sequence, useCurrentFrame } from "remotion";
 import { AppLayer, Composer, Header, Keyboard, ReplyBar, SentMessage, SlashMenu, SparkLine, TYPING } from "./app/Phone";
 import { CLIPS } from "./data/clips";
 import { Dither } from "./kit";
-import { CARD, CLAMP, CYCLE, EASE, FX_START, H, SCROLL, UI, W, ez, lerp, type FxDef } from "./theme";
+import { CARD, CLAMP, CYCLE, EASE, FX_START, H, SCROLL, UI, W, WHITEGRID, ez, lerp, type FxDef } from "./theme";
+import { WhiteGrid } from "./backdrop";
 import { interpolate } from "remotion";
 
 /** What the composer shows at frame f: "/" then one letter per key frame, the full command from CYCLE.fill. */
@@ -58,7 +59,8 @@ export const Cycle: React.FC<{ fx: FxDef; lead?: number }> = ({ fx, lead = 0 }) 
   const caret = Math.floor(f / 11) % 2 === 0 || f < 5;
   const sheet = sheetY(f, lead, CYCLE.len);
   return (
-    <AbsoluteFill style={{ background: UI.bg, overflow: "hidden", transform: `translateY(${sheet}px)` }}>
+    <AbsoluteFill style={{ background: WHITEGRID ? "transparent" : UI.bg, overflow: "hidden", transform: `translateY(${sheet}px)` }}>
+      {WHITEGRID ? <WhiteGrid f={f + lead} /> : null}
       <AppLayer zoom={appScale} opacity={1 - push}>
         <Header showCompose={sent < 0.5} />
         {sent < 1 ? (

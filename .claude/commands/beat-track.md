@@ -1,0 +1,7 @@
+Build a 1080x1920, 24 fps Remotion composition called BeatTrack using the shared kit. Split the frame: a CRT screen on top, my clip $ARGUMENTS below with my whole head inside the safe area and a slow 2.5 percent eased push. Never zoom the footage past 1.07.
+
+On the screen, back to front: a real screenshot of the software I am talking about, pushed in on its media pool, blurred and panning; the grid; one audio track with a real track name from my notes and a ruler. On the track, a waveform of bars built from my real word timings scrolls right to left past a fixed coral playhead with a ticking timecode above it. Bars turn green once played.
+
+On every word I say, a coral marker drops onto the track at the playhead: the pin lands, its stem rises, then the word lands in mono in a small dark chip above it. Alternate the chips between two rows so neighbours never collide, and fade markers out before they reach the header. The live scope trace is the track's baseline: my voice is green at the playhead, and each marker lands with a coral swell that rides away with it.
+
+Camera: open tight on the playhead at 1.3, pull out to the whole screen and hold with a drift; bring the track header in once the camera has pulled out far enough for it to sit inside the safe area. My spoken words as the caption under the trace in coral mono, three at a time, with an eased crossfade. 2 seconds, then hold the last frame.
